@@ -279,16 +279,9 @@ class generate_determinants():
         # consider symmetry if symmetry is specified in input
         consider_symmetry = bool(orbital_symmetry)
 
-        # determine symmetry of ground state
+        # determine symmetry of input determinant
         if consider_symmetry:
-            symm = self.get_determinant_symmetry(det_ini, orbital_symmetry, "d2h")
-            print(symm)
-            exit()
-
-        # create list of all virtual orbitals seperatly for beta (minus) and alpha (plus) spin.
-        #virtual_plus = [i for i in range(1,n_orbitals+1) if i not in det]
-        #virtual_minus = [i for i in range(-1,-(n_orbitals+1), -1) if i not in det]
-        #virtual_all = [virtual_minus, virtual_plus]
+            symm_of_det_ini = self.get_determinant_symmetry(det_ini, orbital_symmetry, "d2h")
 
         # generate all required excitations on initial determinant
         excited_determinants = []
@@ -303,13 +296,9 @@ class generate_determinants():
                 occ_mask = [True for _ in range(n_elec)]
             if not virt_mask:
                 virt_mask = [True for _ in range(n_virt)]
-            #print(occ_mask)
-            #print(occupied)
-            #print(virt_mask)
-            #print(virtual)
-            #print()
             virt_mask_save = virt_mask.copy()
             occ_mask_save = occ_mask.copy()
+
             for i in range(n_elec):
                 for a in range(n_virt):
                     # check if i and a have the same sign (not spin forbidden)
@@ -342,75 +331,18 @@ class generate_determinants():
             get_n_fold_excitation(det_ini, virtuals, excitation)
         # remove duplicates
         excited_determinants = spinfuncs.remove_duplicates(excited_determinants)
-        #for det in excited_determinants:
-        #    print(det)
-        #print(len(excited_determinants))
+        # remove spin forbidden ones
+        if consider_symmetry:
+            temp = []
+            for determinant in excited_determinants:
+                symm = self.get_determinant_symmetry(determinant, orbital_symmetry, "d2h")
+                if symm == symm_of_det_ini:
+                    temp.append(determinant)
+            excited_determinants = temp
 
         # add initial determinant, of which excitations have been performed
         res = [det_ini] + excited_determinants
         return res
-
-        #if 1 in excitations:
-        #    print()
-        #    print("single excitations")
-        #    print()
-        #    # single excitations
-        #    for i in range(n_elecs):
-        #        # choose virtual orbitals depending on the spin of det[i]
-        #        virtual = virtual_all[det[i] > 0]
-        #        for a in virtual:
-        #            new_det = det.copy()
-        #            new_det[i] = a
-        #            new_det = sorted(new_det,key=self.custom_sort)
-        #            determinants.append(new_det)
-        #            print(new_det)
-        #    print()
-        #        
-        #if 2 in excitations:
-        #    print()
-        #    print("double excitations")
-        #    print()
-        #    # double excitations
-        #    counter = 1
-        #    for i in range(n_elecs):
-        #        for j in range(i+1,n_elecs):
-        #            if det[i] > 0:
-        #                for idx_a, a in enumerate(virtual_plus):
-        #                    new_det = det.copy()
-        #                    new_det[i] = a
-        #                    if det[j] > 0:
-        #                        for b in virtual_plus[idx_a+1:]:
-        #                            new_det_2 = new_det.copy()
-        #                            new_det_2[j] = b
-        #                            new_det_2 = sorted(new_det_2,key=self.custom_sort)
-        #                            determinants.append(new_det_2)
-        #                            print(new_det_2)
-        #                    if det[j] < 0:
-        #                        for b in virtual_minus:
-        #                                new_det_2 = new_det.copy()
-        #                                new_det_2[j] = b
-        #                                new_det_2 = sorted(new_det_2,key=self.custom_sort)
-        #                                determinants.append(new_det_2)
-        #                                print(new_det_2)
-        #            if det[i] < 0:
-        #                for idx_a, a in enumerate(virtual_minus):
-        #                    new_det = det.copy()
-        #                    new_det[i] = a
-        #                    if det[j] < 0:
-        #                        for b in virtual_minus[idx_a+1:]:
-        #                            new_det_2 = new_det.copy()
-        #                            new_det_2[j] = b
-        #                            new_det_2 = sorted(new_det_2,key=self.custom_sort)
-        #                            determinants.append(new_det_2)
-        #                            print(new_det_2)
-        #                    if det[j] > 0:
-        #                        for b in virtual_plus:
-        #                            new_det_2 = new_det.copy()
-        #                            new_det_2[j] = b
-        #                            new_det_2 = sorted(new_det_2,key=self.custom_sort)
-        #                            determinants.append(new_det_2)
-        #                            print(new_det_2)
-        #                            counter +=1
         
         
     def get_unique_csfs(self, determinant_basis, S, M_s):
@@ -447,11 +379,6 @@ class generate_determinants():
                 det_basis.append(det)
 
         # add spin for singletts
-        
-        #print()
-        #print(f"determinant basis for csf formation:")
-        #print(det_basis)
-
         # check which electrons are in a double occupied orbital and mask them
         masked_electrons = []
         for determinant in  det_basis:
@@ -462,28 +389,12 @@ class generate_determinants():
                 else:
                     mask.append(True)
             masked_electrons.append(mask)
-        #print()
-        #print("masked electrons:")
-        #print(masked_electrons)
-        #print()
-        #print()
-        #print("print csf list ")
-        #print(csf_determinants)
-        #print(csf_coefficients)
-        #print()
-        #print("start generation of CSFs for each determinant")
+
         # generate csf from unique determinant
         for determinant, mask in  zip(det_basis, masked_electrons):
             n_uncoupled = sum(mask)
-            #print("determinant:")
-            #print(determinant)
             # get spin eigenfunctions for corresponding determinant
             geneological_path, primitive_spin_summands, coupling_coefficients = spinfuncs.get_all_csfs(n_uncoupled,S,M_s)
-            #print()
-            #print("primitives")
-            #print(primitive_spin_summands)
-            #print("coupling coefficients")
-            #print(coupling_coefficients)
             # form correct determinants 
             # assign psimitive spin to orbitals by element wise multiplication 
             for i, lin_combination in enumerate(primitive_spin_summands):
@@ -515,22 +426,7 @@ if __name__ == "__main__":
 
     # call own implementation
     spinfuncs = spinfunction()
-    #csf_paths, primitive_spin, csfs = spinfuncs.get_all_csfs(N,S,M_s)
-    #spinfuncs.print_csfs(csf_paths, primitive_spin, csfs)
     
-
-    # call genealogical script
-    #print()
-    #print("call genealogical script")
-    #print()
-    #X = create_genealogical_spin_functions(N)
-    #print(X[1][0][0][0])
-
-    #printX(X,N,S,M_s)
-
-    # call excitations
-    #print()
-    #print("excited determinants")
     determinant = generate_determinants()
 
     determinants = determinant.get_excitations(N,n_MO,[1,2],orbital_symmetry)
@@ -543,7 +439,5 @@ if __name__ == "__main__":
     # generate MO initial list
     MO_coefficients = [1 if n == 0 else 0 for n in range(len(csfs))]
     
-    #print()
-    #print("AMOLQC Output")
     determinant.write_AMOLQC(csf_coefficients, csfs, MO_coefficients)
     #print()

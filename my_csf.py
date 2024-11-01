@@ -1,6 +1,7 @@
 import numpy as np
 from genealogical import create_genealogical_spin_functions, printX
 from fractions import Fraction
+from charactertables import CharacterTable
 
 class spinfunction():
     """generate configuration state function"""
@@ -211,12 +212,20 @@ class generate_determinants():
             with open("./csfs.out", "w") as printfile:
                 printfile.write(out)
         
-    def get_determinant_symmetry(self, determinant, orbital_symmetry):
+    def get_determinant_symmetry(self, determinant, orbital_symmetry, molecule_symmetry):
         """determine symmetry of total determinant based on occupation of molecular orbitals 
         with certain symmetry"""
-        total_symmetric = ['A1g','Ag','A1','A']
-
-        ...
+        # TODO write test for get_determinant symmetry
+        # get characters
+        symmetry = CharacterTable(molecule_symmetry)
+        character = symmetry.characters
+        # initialize product with symmetry of first electron
+        prod = character[orbital_symmetry[abs(determinant[0])-1]]
+         # multiply up for each electron the orbital symmetry. 
+        for i in range(1,len(determinant)):
+            prod = symmetry.multiply(prod,character[orbital_symmetry[abs(determinant[i])-1]])
+        symm = symmetry.character2label(prod)
+        return symm
 
     def sort_determinant(self, coefficient, determinant):
         # replace alpha spin by inverse as fraction 
@@ -272,7 +281,9 @@ class generate_determinants():
 
         # determine symmetry of ground state
         if consider_symmetry:
-            symm = get_determinant_symmetry(det_ini, orbital_symmetry)
+            symm = self.get_determinant_symmetry(det_ini, orbital_symmetry, "d2h")
+            print(symm)
+            exit()
 
         # create list of all virtual orbitals seperatly for beta (minus) and alpha (plus) spin.
         #virtual_plus = [i for i in range(1,n_orbitals+1) if i not in det]

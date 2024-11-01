@@ -16,9 +16,17 @@ class CharacterTable:
     
     def multiply(self, characters_1, characters_2):
         """elementwise character multiplication of two irreps"""
-        assert len(characters_1) == len(characters_2) 
+        assert len(characters_1) == len(characters_2), "characters are of unequal length" 
         res = [i * j for i, j in zip(characters_1, characters_2)]
         return res
+    
+    def character2label(self, character):
+        """translate character to mulliken label of character table"""
+        for label, charac in self.characters.items():
+            if charac == character:
+                return label
+        return None
+
     
     def d2h(self):
         """load character table d2h"""

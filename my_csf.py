@@ -188,7 +188,7 @@ class spinfunction():
 class generate_determinants():
     """generate excited determinants"""
     def __init__(self):
-        spinfuncs = spinfunction()
+        self.spinfuncs = spinfunction()
     
     def custom_sort(self,x):
         return (abs(x), x < 0)
@@ -258,7 +258,7 @@ class generate_determinants():
         # Check if all values in the counter (i.e., occurrences) are exactly 2
         return all(determinant.count(x) == 2 for x in set(determinant))
     
-    def get_excitations(self, n_elecs, n_orbitals, excitations, orbital_symmetry=[], det_ini=[]):
+    def get_excitations(self, n_elecs, n_orbitals, excitations,orbital_symmetry=[], tot_sym="", det_ini=[]):
         """create all excitation determinants"""
         n_doubly_occ = n_elecs // 2
 
@@ -281,7 +281,7 @@ class generate_determinants():
 
         # determine symmetry of input determinant
         if consider_symmetry:
-            symm_of_det_ini = self.get_determinant_symmetry(det_ini, orbital_symmetry, "d2h")
+            symm_of_det_ini = self.get_determinant_symmetry(det_ini, orbital_symmetry, tot_sym)
 
         # generate all required excitations on initial determinant
         excited_determinants = []
@@ -330,12 +330,12 @@ class generate_determinants():
         for excitation in excitations:
             get_n_fold_excitation(det_ini, virtuals, excitation)
         # remove duplicates
-        excited_determinants = spinfuncs.remove_duplicates(excited_determinants)
+        excited_determinants = self.spinfuncs.remove_duplicates(excited_determinants)
         # remove spin forbidden ones
         if consider_symmetry:
             temp = []
             for determinant in excited_determinants:
-                symm = self.get_determinant_symmetry(determinant, orbital_symmetry, "d2h")
+                symm = self.get_determinant_symmetry(determinant, orbital_symmetry, tot_sym)
                 if symm == symm_of_det_ini:
                     temp.append(determinant)
             excited_determinants = temp
@@ -394,7 +394,7 @@ class generate_determinants():
         for determinant, mask in  zip(det_basis, masked_electrons):
             n_uncoupled = sum(mask)
             # get spin eigenfunctions for corresponding determinant
-            geneological_path, primitive_spin_summands, coupling_coefficients = spinfuncs.get_all_csfs(n_uncoupled,S,M_s)
+            geneological_path, primitive_spin_summands, coupling_coefficients = self.spinfuncs.get_all_csfs(n_uncoupled,S,M_s)
             # form correct determinants 
             # assign psimitive spin to orbitals by element wise multiplication 
             for i, lin_combination in enumerate(primitive_spin_summands):
@@ -418,19 +418,24 @@ class generate_determinants():
 
 if __name__ == "__main__":
     # set quantities
-    N = 2
-    n_MO = 12
+    N = 10
+    n_MO = 14
     S = 0
     M_s = 0
-    orbital_symmetry = ['Ag', 'B1u', 'Ag', 'B2u', 'B3u', 'B1u', 'Ag', 'B2g', 'B3g', 'Ag', 'B1u', 'B1u']
+    #orbital_symmetry = ['Ag', 'B1u', 'Ag', 'B2u', 'B3u', 'B1u', 'Ag', 'B2g', 'B3g', 'Ag', 'B1u', 'B1u'] # H2 TZPAE
+    #orbital_symmetry =['Ag', 'B1u', 'Ag', 'B1u', 'B3u', 'B2u', 'Ag', 'B3g', 'B2g', 'B1u', 'B1u', 'B2u', 'Ag', 'B3g', 'B2g', 'Ag', 'B1u', 'B1g'] # N2 PBE0 TZPAE
+    orbital_symmetry = ['A1', 'A1', 'B2', 'A1', 'B1', 'A1', 'B2', 'B2', 'A1', 'B1', 'A1', 'B2', 'A1', 'A1']
+    tot_sym = "c2v"
+    #orbital_symmetry =[]
 
     # call own implementation
-    spinfuncs = spinfunction()
     
     determinant = generate_determinants()
 
-    determinants = determinant.get_excitations(N,n_MO,[1,2],orbital_symmetry)
-    #print(len(determinants))
+    determinants = determinant.get_excitations(N,n_MO,[1,2],orbital_symmetry,tot_sym)
+    print(f"number of determinant basis {len(determinants)}")
+
+
     csf_coefficients, csfs = determinant.get_unique_csfs(determinants, S, M_s)
 
     # sort determinants to obtain AMOLQC format
@@ -440,4 +445,5 @@ if __name__ == "__main__":
     MO_coefficients = [1 if n == 0 else 0 for n in range(len(csfs))]
     
     determinant.write_AMOLQC(csf_coefficients, csfs, MO_coefficients)
-    #print()
+    print()
+    print(f"number of csfs {len(csf_coefficients)}")

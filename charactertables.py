@@ -6,6 +6,7 @@ class CharacterTable:
         self.characters = {}
         self.linear_funcs = {}
         self.quadratic_funcs = {}
+        self.cubic_funcs = {}
         self.order = 0
         self.init_table()
 
@@ -13,6 +14,8 @@ class CharacterTable:
         """load the desired character table"""
         if self.point_group == "d2h":
             self.d2h()
+        if self.point_group == "c2v":
+            self.c2v()    
     
     def multiply(self, characters_1, characters_2):
         """elementwise character multiplication of two irreps"""
@@ -32,7 +35,7 @@ class CharacterTable:
         """load character table d2h"""
         self.operations = [
             "1 E",
-            "1 C2",
+            "1 C2_z",
             "1 sv_xz",
             "1 sv_yz",
             ]
@@ -66,9 +69,44 @@ class CharacterTable:
             "B2u": [],
             "B3u": [],
         }
+        self.order = 8
+
+    def c2v(self):
+        """load character table c2v"""
+        self.operations = [
+            "1 E",
+            "1 C2_z",
+            "1 sv_xz",
+            "1 sv_yz",
+            ]
+        self.characters = {
+            "A1" : [1,1,1,1],
+            "A2" : [1,1,-1,-1],
+            "B1" : [1,-1,1,-1],
+            "B2" : [1,-1,-1,1],
+        }
+        self.linear_funcs = {
+            "A1" : ["z"],
+            "A2" : ["Rz"],
+            "B1" : ["x", "Ry"],
+            "B2" : ["y", "Rx"],
+        }
+        self.quadratic_funcs = {
+            "A1" : ["xx", "yy", "zz"],
+            "A2" : ["xy"],
+            "B1" : ["xz"],
+            "B2" : ["yz"],
+        }
+        self.cubic_funcs = {
+            "A1" : ["zzz", "xxz", "yyz"],
+            "A2" : ["xyz"],
+            "B1" : ["xzz", "xxx", "xyy"],
+            "B2" : ["yzz", "yyy", "xxy"],
+        }
         self.order = 4
-    
+
 if __name__ == "__main__":
-    symmetry = CharacterTable("d2h")
-    res = symmetry.multiply(symmetry.characters["B1g"], symmetry.characters["B1g"])
+    symmetry = CharacterTable("c2v")
+    print(symmetry.characters)
+    res = symmetry.multiply(symmetry.characters["A1"], symmetry.characters["A2"])
     print(res)

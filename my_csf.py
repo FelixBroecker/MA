@@ -211,6 +211,56 @@ class generate_determinants():
         if write_file:
             with open("./csfs.out", "w") as printfile:
                 printfile.write(out)
+
+    def read_AMOLQC_csfs(self, filename, n_elec, type="csf"):
+        """read in csfs of AMOLQC format with CI coefficients"""
+        csf_coefficients = []
+        csfs = []
+        MO_coefficients = []
+        csf_tmp = []
+        csf_coefficient_tmp = []
+        # read csfs
+        if type == "csf":
+            with open("amolqc.wf", "r") as f:
+                found_csf = False
+                for line in f:
+                    if "$csfs" in line:
+                        found_csf = True
+                        new_csf = True
+                        # extract number of csfs
+                        line = f.readline()
+                        n_csfs = int(line)
+                        line = f.readline()
+                        # initialize counter to iterate over csfs
+                        csf_counter = 0
+                    if found_csf:
+                        entries = line.split()
+                        if new_csf:
+                            MO_coefficients.append(float(entries[0]))
+                            n_summands = int(entries[1])
+                            summand_counter = 0
+                            new_csf = False
+                            csf_counter +=1
+                        else:
+                            det = []
+                            for i in range(1,len(entries)):
+                                if i < n_elec:
+                                    det.append(i * int(entries[i]))
+                                else:
+                                    det.append(-1 * int(entries[i]))
+                            csf_coefficient_tmp.append(float(entries[0]))
+                            csf_tmp.append(det.copy())
+                            summand_counter += 1
+                            if summand_counter == n_summands:
+                                new_csf = True
+                                csf_coefficients.append(csf_coefficient_tmp)
+                                csfs.append(csf_tmp)
+                                csf_coefficient_tmp = []
+                                csf_tmp = []
+                            if csf_counter == n_csfs:
+                                break
+        return csf_coefficients, csfs, MO_coefficients
+
         
     def get_determinant_symmetry(self, determinant, orbital_symmetry, molecule_symmetry):
         """determine symmetry of total determinant based on occupation of molecular orbitals 
@@ -431,19 +481,22 @@ if __name__ == "__main__":
     # call own implementation
     
     determinant = generate_determinants()
+    
+    n_elec = 2
+    csf_coefficients, csfs, MO_coefficients = determinant.read_AMOLQC_csfs("amolqc.wf", n_elec) # TODO write test
 
-    determinants = determinant.get_excitations(N,n_MO,[1,2],orbital_symmetry,tot_sym)
+    determinants = determinant.get_excitations(N,n_MO,[1,2],orbital_symmetry,tot_sym) # TODO write test
     print(f"number of determinant basis {len(determinants)}")
 
 
-    csf_coefficients, csfs = determinant.get_unique_csfs(determinants, S, M_s)
+    csf_coefficients, csfs = determinant.get_unique_csfs(determinants, S, M_s) 
 
     # sort determinants to obtain AMOLQC format
-    csf_coefficients, csfs = determinant.sort_determinants_in_csfs(csf_coefficients, csfs)
+    csf_coefficients, csfs = determinant.sort_determinants_in_csfs(csf_coefficients, csfs) # TODO write test
 
     # generate MO initial list
     MO_coefficients = [1 if n == 0 else 0 for n in range(len(csfs))]
     
-    determinant.write_AMOLQC(csf_coefficients, csfs, MO_coefficients)
+    determinant.write_AMOLQC(csf_coefficients, csfs, MO_coefficients) 
     print()
     print(f"number of csfs {len(csf_coefficients)}")

@@ -13,13 +13,13 @@ class generate_determinants():
     def custom_sort(self,x):
         return (abs(x), x < 0)
     
-    def write_AMOLQC(self, csf_coefficients, csfs, MO_coefficients, write_file = True, verbose=False):
+    def write_AMOLQC(self, csf_coefficients, csfs, CI_coefficients, write_file = True, verbose=False):
         """determinant representation in csfs needs to be sorted for alpha spins first
         and then beta spins"""
         out="$csfs\n"
         out += f"{int(len(csfs)): >7}\n"
         for i, csf in enumerate(csfs):
-            out += f"{MO_coefficients[i]: >10.7f}       {len(csf)}\n"
+            out += f"{CI_coefficients[i]: >10.7f}       {len(csf)}\n"
             for j, determinant in enumerate(csf):
                 out += f" {csf_coefficients[i][j]: 9.7f}"
                 for electron in determinant:
@@ -36,7 +36,7 @@ class generate_determinants():
         """read in csfs of AMOLQC format with CI coefficients"""
         csf_coefficients = []
         csfs = []
-        MO_coefficients = []
+        CI_coefficients = []
         csf_tmp = []
         csf_coefficient_tmp = []
         # read csfs
@@ -56,7 +56,7 @@ class generate_determinants():
                     if found_csf:
                         entries = line.split()
                         if new_csf:
-                            MO_coefficients.append(float(entries[0]))
+                            CI_coefficients.append(float(entries[0]))
                             n_summands = int(entries[1])
                             summand_counter = 0
                             new_csf = False
@@ -79,7 +79,50 @@ class generate_determinants():
                                 csf_tmp = []
                             if csf_counter == n_csfs:
                                 break
-        return csf_coefficients, csfs, MO_coefficients
+        return csf_coefficients, csfs, CI_coefficients
+    
+
+    def get_transformation_matrix(self, csf_coefficients: list, csfs: list, CI_coefficients: list):
+        """convert csfs and MO coefficients in CI coefficient matrix, csf coefficient matrix, and
+        resprective determinant basis
+
+        Parameters
+        ----------
+        csf_coefficients : list
+            list of csf coefficients.
+        csfs : list
+            list of determinants that builds csf with coefficient from coefficient list.
+        CI_coefficients : list
+            list of csf CI coefficients.
+
+        Returns
+        -------
+        CI_coefficient_matrix : list
+            Square matrix (n_csf x n_csf) with CI coefficients on the diagonal.
+        transformation_matrix : numpy array
+            Transformation matrix that stores row-wise the coupling coefficients of respective determinants
+            in determinant basis to form csf.
+        det_basis : numpy array
+            All unique determinants that are basis to form csfs.
+        """
+        det_basis = []
+        n_csfs = len(csf_coefficients)
+        # expand determinants from csfs in determinant basis
+        for csf in csfs:
+            for det in csf:
+                if det not in det_basis:
+                    det_basis.append(det)
+        # get transformation matrix and CI coefficient matrix
+        n_dets = len(det_basis)
+        transformation_matrix = np.zeros((n_csfs,n_dets))
+        CI_coefficient_matrix = np.zeros((n_csfs,n_csfs))
+        for i in range(len(csfs)):
+            CI_coefficient_matrix[i,i] = CI_coefficients[i]
+            for j in range(len(csfs[i])):
+                det_idx = det_basis.index(csfs[i][j])
+                transformation_matrix[i][det_idx] = csf_coefficients[i][j]
+
+        return CI_coefficient_matrix, transformation_matrix, det_basis
 
         
     def get_determinant_symmetry(self, determinant, orbital_symmetry, molecule_symmetry):
@@ -128,6 +171,64 @@ class generate_determinants():
         # Check if all values in the counter (i.e., occurrences) are exactly 2
         return all(determinant.count(x) == 2 for x in set(determinant))
     
+    def cut_csfs(self, csf_coefficients, csfs, CI_coefficients, CI_coefficient_thresh):
+        """cut off csf coefficients, csfs, and CI coefficients by the size of the CI coefficients
+        Parameters
+        ----------
+        csf_coefficients : list
+            list of csf coefficients.
+        csfs : list
+            list of determinants that builds csf with coefficient from coefficient list.
+        CI_coefficients : list
+            list of csf CI coefficients.
+        CI_coefficient_thresh: float
+            cut-off value below which the csfs are discarded.
+
+        Returns
+        -------
+        csf_coefficients : list
+            list of csf coefficients.
+        csfs : list
+            list of determinants that builds csf with coefficient from coefficient list.
+        CI_coefficients : list
+            list of csf CI coefficients.
+        cut_csf_coefficients : list
+            list of discarded csf coefficients.
+        cut_csfs : list
+            list of discarded determinants that build csf with coefficient from coefficient list.
+        cut_CI_coefficients : list
+            list of discarded csf CI coefficients.
+        """
+        # sort CI coefficients from largest to smallest absolut value and respectively csfs and csf_coefficients
+        CI_coefficients_abs = -np.abs(np.array(CI_coefficients))
+        idx = CI_coefficients_abs.argsort()
+
+        CI_coefficients = [CI_coefficients[i] for i in idx]
+        csf_coefficients = [csf_coefficients[i] for i in idx]
+        csfs = [csfs[i] for i in idx]
+
+        # cut off csfs below CI coefficient threshold
+        cut_CI_coefficients = []
+        cut_csf_coefficients = []
+        cut_csfs = []
+        cut_off = False
+        for i,coeff in enumerate(CI_coefficients):
+            if abs(coeff)<CI_coefficient_thresh:
+                cut_off = True
+                i_cut = i
+                break
+
+        if cut_off:
+            cut_CI_coefficients += CI_coefficients[i_cut:]
+            cut_csf_coefficients += csf_coefficients[i_cut:]
+            cut_csfs += csfs[i_cut:]
+
+            CI_coefficients = CI_coefficients[:i_cut]
+            csf_coefficients = csf_coefficients[:i_cut]
+            csfs = csfs[:i_cut]
+        return csf_coefficients, csfs, CI_coefficients, cut_csf_coefficients, cut_csfs, cut_CI_coefficients
+    
+
     def get_excitations(self, n_elecs, n_orbitals, excitations,orbital_symmetry=[], tot_sym="", det_ini=[]):
         """create all excitation determinants"""
         n_doubly_occ = n_elecs // 2
@@ -288,35 +389,65 @@ class generate_determinants():
 
 if __name__ == "__main__":
     # set quantities
-    N = 10
-    n_MO = 14
+    N = 4
+    n_MO = 4
     S = 0
     M_s = 0
+    CI_coefficient_thresh = 1e-2
     #orbital_symmetry = ['Ag', 'B1u', 'Ag', 'B2u', 'B3u', 'B1u', 'Ag', 'B2g', 'B3g', 'Ag', 'B1u', 'B1u'] # H2 TZPAE
     #orbital_symmetry =['Ag', 'B1u', 'Ag', 'B1u', 'B3u', 'B2u', 'Ag', 'B3g', 'B2g', 'B1u', 'B1u', 'B2u', 'Ag', 'B3g', 'B2g', 'Ag', 'B1u', 'B1g'] # N2 PBE0 TZPAE
     orbital_symmetry = ['A1', 'A1', 'B2', 'A1', 'B1', 'A1', 'B2', 'B2', 'A1', 'B1', 'A1', 'B2', 'A1', 'A1']
     tot_sym = "c2v"
-    #orbital_symmetry =[]
+    orbital_symmetry =[]
 
     # call own implementation
     
     determinant = generate_determinants()
-    
-    n_elec = 2
-    csf_coefficients, csfs, MO_coefficients = determinant.read_AMOLQC_csfs("amolqc.wf", n_elec) # TODO write test
 
+    # get excitation determinants from ground state HF determinant
     determinants = determinant.get_excitations(N,n_MO,[1,2],orbital_symmetry,tot_sym) # TODO write test
     print(f"number of determinant basis {len(determinants)}")
 
-
+    # form csfs of this determinants
     csf_coefficients, csfs = determinant.get_unique_csfs(determinants, S, M_s) 
 
     # sort determinants to obtain AMOLQC format
     csf_coefficients, csfs = determinant.sort_determinants_in_csfs(csf_coefficients, csfs) # TODO write test
-
-    # generate MO initial list
-    MO_coefficients = [1 if n == 0 else 0 for n in range(len(csfs))]
-    
-    determinant.write_AMOLQC(csf_coefficients, csfs, MO_coefficients) 
     print()
     print(f"number of csfs {len(csf_coefficients)}")
+
+    # generate MO initial list
+    CI_coefficients = [1 if n == 0 else 0 for n in range(len(csfs))]
+    
+    # write wavefunction in AMOLQC format
+    determinant.write_AMOLQC(csf_coefficients, csfs, CI_coefficients) 
+    
+    ########################################
+    # perform CI and Jas optimization
+    ########################################
+
+    # read wavefunction from 1. optimization
+    n_elec = 2
+    csf_coefficients, csfs, CI_coefficients = determinant.read_AMOLQC_csfs("amolqc.wf", n_elec) # TODO write test
+
+    # cut of csfs
+    cut_CI_coefficients = []
+    cut_csf_coefficients = []
+    cut_csfs = []
+    csf_coefficients, csfs, CI_coefficients, cut_csf_coeffs_tmp, cut_csfs_tmp, cut_CI_coeffs_tmp \
+    = determinant.cut_csfs(csf_coefficients, csfs, CI_coefficients, CI_coefficient_thresh) # TODO write Test
+    
+    #print(csf_coefficients)
+    #print(csfs)
+    #print(CI_coefficients)
+    #print(cut_csf_coeffs_tmp)
+    #print(cut_csfs_tmp)
+    #print(cut_CI_coeffs_tmp)
+
+    # TODO adapt function to do single and double excitations from HF ref only 
+    determinants = determinant.get_excitations(N,n_MO,[1,2],orbital_symmetry,tot_sym, det_ini=[])
+    # perform single and double excitations of determinants
+
+
+    #CI_coefficient_matrix, transformation_matrix, det_basis = determinant.get_transformation_matrix(csf_coefficients, csfs, CI_coefficients) # TODO write test
+    

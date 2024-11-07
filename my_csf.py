@@ -229,20 +229,23 @@ class generate_determinants():
         return csf_coefficients, csfs, CI_coefficients, cut_csf_coefficients, cut_csfs, cut_CI_coefficients
     
 
-    def get_excitations(self, n_elecs, n_orbitals, excitations,orbital_symmetry=[], tot_sym="", det_ini=[]):
-        """create all excitation determinants"""
-        n_doubly_occ = n_elecs // 2
-
+    def build_energy_lowest_detetminant(self, n_elecs):
         # create HF determinant, if no initial determinant is passed
+        det = []
+        n_doubly_occ = n_elecs // 2
         orbital = 1
-        if not det_ini:
-            if n_elecs > 1:
-                for _ in range(n_doubly_occ):
-                    det_ini.append((orbital))
-                    det_ini.append(-(orbital))
-                    orbital += 1
-            if n_elecs%2:
-                det_ini.append((orbital))
+        if n_elecs > 1:
+            for _ in range(n_doubly_occ):
+                det.append((orbital))
+                det.append(-(orbital))
+                orbital += 1
+        if n_elecs%2:
+            det.append((orbital))
+        return det
+    
+
+    def get_excitations(self, n_orbitals, excitations, det_ini, orbital_symmetry=[], tot_sym="",det_reference=[] ):
+        """create all excitation determinants"""
 
         # all unoccupied MOs are virtual orbitals
         virtuals = [i for i in range(-n_orbitals,n_orbitals+1) if i not in det_ini and i != 0]
@@ -253,6 +256,23 @@ class generate_determinants():
         # determine symmetry of input determinant
         if consider_symmetry:
             symm_of_det_ini = self.get_determinant_symmetry(det_ini, orbital_symmetry, tot_sym)
+
+        # initialize list to mask excitations
+        n_elec = len(det_ini)
+        n_virt = len(virtuals)
+        occ_mask = [True for _ in range(n_elec)]
+        virt_mask = [True for _ in range(n_virt)]
+
+        # do excitations from electrons that correspond to not excited electrons in reference determinant
+        if det_reference:
+            #assert bool(det_reference), "reference_excitation is True but no reference state has been passed"
+            virtuals_reference = [i for i in range(-n_orbitals,n_orbitals+1) if i not in det_reference and i != 0]
+            for idx, i in enumerate(det_ini):
+                if i not in det_reference:
+                    occ_mask[idx] = False
+            for idx, a in enumerate(virtuals):
+                if a not in virtuals_reference:
+                    virt_mask[idx] = False
 
         # generate all required excitations on initial determinant
         excited_determinants = []
@@ -299,7 +319,7 @@ class generate_determinants():
             
         # get all demanded excited determinants recursivly
         for excitation in excitations:
-            get_n_fold_excitation(det_ini, virtuals, excitation)
+            get_n_fold_excitation(det_ini, virtuals, excitation,occ_mask=occ_mask, virt_mask=virt_mask)
         # remove duplicates
         excited_determinants = self.spinfuncs.remove_duplicates(excited_determinants)
         # remove spin forbidden ones
@@ -312,7 +332,7 @@ class generate_determinants():
             excited_determinants = temp
 
         # add initial determinant, of which excitations have been performed
-        res = [det_ini] + excited_determinants
+        res = excited_determinants
         return res
         
         
@@ -404,8 +424,13 @@ if __name__ == "__main__":
     
     determinant = generate_determinants()
 
+    determinants = []
+    # get energy lowest determinant
+    det_ini = determinant.build_energy_lowest_detetminant(N)
     # get excitation determinants from ground state HF determinant
-    determinants = determinant.get_excitations(N,n_MO,[1,2],orbital_symmetry,tot_sym) # TODO write test
+    excitations = determinant.get_excitations(n_MO, [1,2], det_ini, orbital_symmetry=orbital_symmetry, tot_sym=tot_sym) # TODO write test
+    determinants += [det_ini]
+    determinants += excitations
     print(f"number of determinant basis {len(determinants)}")
 
     # form csfs of this determinants
@@ -445,7 +470,11 @@ if __name__ == "__main__":
     #print(cut_CI_coeffs_tmp)
 
     # TODO adapt function to do single and double excitations from HF ref only 
-    determinants = determinant.get_excitations(N,n_MO,[1,2],orbital_symmetry,tot_sym, det_ini=[])
+    # Test first
+    det = [1,-1,2,-3]
+    det_reference = [1,-1,2,-2]
+    determinants = determinant.get_excitations(n_MO,[2],det, det_reference=det_reference)
+    print(determinants)
     # perform single and double excitations of determinants
 
 

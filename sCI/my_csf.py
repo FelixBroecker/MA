@@ -1,11 +1,10 @@
 import numpy as np
-from genealogical import create_genealogical_spin_functions, printX
 from fractions import Fraction
 from charactertables import CharacterTable
 from spincoupling import SpinCoupling
 
 
-class generate_determinants():
+class Generate_Determinants():
     """generate excited determinants"""
     def __init__(self):
         self.spinfuncs = SpinCoupling()
@@ -41,7 +40,7 @@ class generate_determinants():
         csf_coefficient_tmp = []
         # read csfs
         if type == "csf":
-            with open("amolqc.wf", "r") as f:
+            with open("sCI/amolqc.wf", "r") as f:
                 found_csf = False
                 for line in f:
                     if "$csfs" in line:
@@ -264,7 +263,7 @@ class generate_determinants():
         virt_mask = [True for _ in range(n_virt)]
 
         # do excitations from electrons that correspond to not excited electrons in reference determinant
-        if det_reference:
+        if det_reference: 
             #assert bool(det_reference), "reference_excitation is True but no reference state has been passed"
             virtuals_reference = [i for i in range(-n_orbitals,n_orbitals+1) if i not in det_reference and i != 0]
             for idx, i in enumerate(det_ini):
@@ -319,7 +318,7 @@ class generate_determinants():
             
         # get all demanded excited determinants recursivly
         for excitation in excitations:
-            get_n_fold_excitation(det_ini, virtuals, excitation,occ_mask=occ_mask, virt_mask=virt_mask)
+            get_n_fold_excitation(det_ini, virtuals, excitation, )
         # remove duplicates
         excited_determinants = self.spinfuncs.remove_duplicates(excited_determinants)
         # remove spin forbidden ones
@@ -422,13 +421,16 @@ if __name__ == "__main__":
 
     # call own implementation
     
-    determinant = generate_determinants()
+    determinant = Generate_Determinants()
 
     determinants = []
     # get energy lowest determinant
     det_ini = determinant.build_energy_lowest_detetminant(N)
     # get excitation determinants from ground state HF determinant
-    excitations = determinant.get_excitations(n_MO, [1,2], det_ini, orbital_symmetry=orbital_symmetry, tot_sym=tot_sym) # TODO write test
+    excitations = determinant.get_excitations(n_MO, [1,2,3,4], det_ini, orbital_symmetry=orbital_symmetry, tot_sym=tot_sym) # TODO write test
+    print(excitations)
+    print(len(excitations))
+    exit()
     determinants += [det_ini]
     determinants += excitations
     print(f"number of determinant basis {len(determinants)}")

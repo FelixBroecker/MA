@@ -273,6 +273,19 @@ def n_tuple_excitations_with_reference(number_of_MOs, excitations_to_perform, de
     print(excitations)
     assert excitations == ref_excitations, "test for n-tuple excitation with respect to a reference determinant without symmetry failed"
 
+
+def n_tuple_excitations_frozen_core(number_of_MOs, excitations_to_perform, determinant, frozen_core_electrons):
+    """test simple n-tuple excitation by freezing core electrons."""
+    ref_excitations = [
+        [1, -1, -2, 3], [1, -1, -2, 4], 
+        [1, -1, 2, -4], [1, -1, 2, -3], 
+        [1, -1, 3, -4], [1, -1, 3, -3], 
+        [1, -1, 4, -4], [1, -1, -3, 4]
+        ]
+    excitations = sCI.get_excitations(number_of_MOs, excitations_to_perform, determinant, core=frozen_core_electrons)
+
+    assert excitations == ref_excitations, "test for n-tuple excitation with frozen core without symmetry failed"
+
 # test simple n-tuple excitations
 number_of_MOs, excitations_to_perform, determinant = test_set_1()
 n_tuple_excitations(number_of_MOs, excitations_to_perform, determinant)
@@ -311,5 +324,9 @@ number_of_MOs, excitations_to_perform, determinant = test_set_4()
 reference_determinant = [1,-1,2,-2]
 n_tuple_excitations_with_reference(number_of_MOs, excitations_to_perform, determinant, reference_determinant)
 
+# test simple excitations without symmetry by freezing core orbitals
+number_of_MOs, excitations_to_perform, determinant = test_set_1()
+frozen_core_electrons = [1,-1]
+n_tuple_excitations_frozen_core(number_of_MOs, excitations_to_perform, determinant, frozen_core_electrons)
 
 print("All tests passed ✅")

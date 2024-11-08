@@ -243,7 +243,7 @@ class Generate_Determinants():
         return det
     
 
-    def get_excitations(self, n_orbitals, excitations, det_ini, orbital_symmetry=[], tot_sym="",det_reference=[] ):
+    def get_excitations(self, n_orbitals, excitations, det_ini, orbital_symmetry=[], tot_sym="",det_reference=[], core=[]):
         """create all excitation determinants"""
 
         # all unoccupied MOs are virtual orbitals
@@ -272,6 +272,12 @@ class Generate_Determinants():
             for idx, a in enumerate(virtuals):
                 if a not in virtuals_reference:
                     virt_mask[idx] = False
+        
+        # if core electrons are passed, no excitations shall be performed with these electrons
+        if core:
+            for idx, i in enumerate(det_ini):
+                if i in core:
+                    occ_mask[idx] = False
 
         # generate all required excitations on initial determinant
         excited_determinants = []
@@ -418,7 +424,7 @@ if __name__ == "__main__":
     CI_coefficient_thresh = 1e-2
     #orbital_symmetry = ['Ag', 'B1u', 'Ag', 'B2u', 'B3u', 'B1u', 'Ag', 'B2g', 'B3g', 'Ag', 'B1u', 'B1u'] # H2 TZPAE
     #orbital_symmetry =['Ag', 'B1u', 'Ag', 'B1u', 'B3u', 'B2u', 'Ag', 'B3g', 'B2g', 'B1u', 'B1u', 'B2u', 'Ag', 'B3g', 'B2g', 'Ag', 'B1u', 'B1g'] # N2 PBE0 TZPAE
-    orbital_symmetry = ['A1', 'A1', 'B2', 'A1', 'B1', 'A1', 'B2', 'B2', 'A1', 'B1', 'A1', 'B2', 'A1', 'A1']
+    orbital_symmetry = ['A1', 'A1', 'B2', 'A1', 'B1', 'A1', 'B2', 'B2', 'A1', 'B1', 'A1', 'B2', 'A1', 'A1'] #H2O DZAE
     tot_sym = "c2v"
     orbital_symmetry =[]
 
@@ -429,12 +435,14 @@ if __name__ == "__main__":
     determinants = []
     # get energy lowest determinant
     det_ini = determinant.build_energy_lowest_detetminant(N)
+    print(det_ini)
+    core = [1,-1]
     # get excitation determinants from ground state HF determinant
-    excitations = determinant.get_excitations(n_MO, [1,2,3,4], det_ini, orbital_symmetry=orbital_symmetry, tot_sym=tot_sym)
+    excitations = determinant.get_excitations(n_MO, [1,2], det_ini, orbital_symmetry=orbital_symmetry, tot_sym=tot_sym,core=core)
     determinants += [det_ini]
     determinants += excitations
     print(f"number of determinant basis {len(determinants)}")
-
+    print(excitations)
 
     # form csfs of this determinants
     csf_coefficients, csfs = determinant.get_unique_csfs(determinants, S, M_s) 
@@ -449,7 +457,7 @@ if __name__ == "__main__":
     
     # write wavefunction in AMOLQC format
     determinant.write_AMOLQC(csf_coefficients, csfs, CI_coefficients) 
-    
+    exit()
     ########################################
     # perform CI and Jas optimization
     ########################################

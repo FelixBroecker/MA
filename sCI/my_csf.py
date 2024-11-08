@@ -427,10 +427,7 @@ if __name__ == "__main__":
     # get energy lowest determinant
     det_ini = determinant.build_energy_lowest_detetminant(N)
     # get excitation determinants from ground state HF determinant
-    excitations = determinant.get_excitations(n_MO, [1,2,3,4], det_ini, orbital_symmetry=orbital_symmetry, tot_sym=tot_sym) # TODO write test
-    print(excitations)
-    print(len(excitations))
-    exit()
+    excitations = determinant.get_excitations(n_MO, [1,2,3,4], det_ini, orbital_symmetry=orbital_symmetry, tot_sym=tot_sym)
     determinants += [det_ini]
     determinants += excitations
     print(f"number of determinant basis {len(determinants)}")
@@ -455,22 +452,24 @@ if __name__ == "__main__":
 
     # read wavefunction from 1. optimization
     n_elec = 2
-    csf_coefficients, csfs, CI_coefficients = determinant.read_AMOLQC_csfs("amolqc.wf", n_elec) # TODO write test
+    csf_coefficients, csfs, CI_coefficients = determinant.read_AMOLQC_csfs("amolqc.wf", n_elec) 
 
     # cut of csfs
     cut_CI_coefficients = []
     cut_csf_coefficients = []
     cut_csfs = []
     csf_coefficients, csfs, CI_coefficients, cut_csf_coeffs_tmp, cut_csfs_tmp, cut_CI_coeffs_tmp \
-    = determinant.cut_csfs(csf_coefficients, csfs, CI_coefficients, CI_coefficient_thresh) # TODO write Test
+    = determinant.cut_csfs(csf_coefficients, csfs, CI_coefficients, CI_coefficient_thresh) 
     
-    #print(csf_coefficients)
-    #print(csfs)
-    #print(CI_coefficients)
-    #print(cut_csf_coeffs_tmp)
-    #print(cut_csfs_tmp)
-    #print(cut_CI_coeffs_tmp)
-
+    print()
+    print(csf_coefficients)
+    print(csfs)
+    print(CI_coefficients)
+    print()
+    print(cut_csf_coeffs_tmp)
+    print(cut_csfs_tmp)
+    print(cut_CI_coeffs_tmp)
+    exit()
     # TODO adapt function to do single and double excitations from HF ref only 
     # Test first
     det = [1,-1,2,-3]

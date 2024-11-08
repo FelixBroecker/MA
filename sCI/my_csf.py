@@ -315,10 +315,13 @@ class Generate_Determinants():
                             virt_mask = virt_mask_save.copy()
                     else:
                         continue
-            
+        
+        
         # get all demanded excited determinants recursivly
         for excitation in excitations:
-            get_n_fold_excitation(det_ini, virtuals, excitation, )
+            occ_mask_ini = occ_mask.copy()
+            virt_mask_ini = virt_mask.copy()
+            get_n_fold_excitation(det_ini, virtuals, excitation, occ_mask=occ_mask_ini, virt_mask=virt_mask_ini)
         # remove duplicates
         excited_determinants = self.spinfuncs.remove_duplicates(excited_determinants)
         # remove spin forbidden ones
@@ -432,6 +435,7 @@ if __name__ == "__main__":
     determinants += excitations
     print(f"number of determinant basis {len(determinants)}")
 
+
     # form csfs of this determinants
     csf_coefficients, csfs = determinant.get_unique_csfs(determinants, S, M_s) 
 
@@ -461,21 +465,14 @@ if __name__ == "__main__":
     csf_coefficients, csfs, CI_coefficients, cut_csf_coeffs_tmp, cut_csfs_tmp, cut_CI_coeffs_tmp \
     = determinant.cut_csfs(csf_coefficients, csfs, CI_coefficients, CI_coefficient_thresh) 
     
-    print()
-    print(csf_coefficients)
-    print(csfs)
-    print(CI_coefficients)
-    print()
-    print(cut_csf_coeffs_tmp)
-    print(cut_csfs_tmp)
-    print(cut_CI_coeffs_tmp)
-    exit()
     # TODO adapt function to do single and double excitations from HF ref only 
     # Test first
     det = [1,-1,2,-3]
     det_reference = [1,-1,2,-2]
     determinants = determinant.get_excitations(n_MO,[2],det, det_reference=det_reference)
+    print("After cutting")
     print(determinants)
+
     # perform single and double excitations of determinants
 
 

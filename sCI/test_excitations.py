@@ -71,6 +71,14 @@ def test_set_3():
         ]
     return csf_coefficients, csfs, CI_coefficients
 
+
+def test_set_4():
+    """test set 4 consists of 4 electrons in 4 orbitals with a already single excited determinant."""
+    number_of_MOs = 4 
+    excitations_to_perform = [2] # double excitations
+    determinant = [1,-1,2,-3]
+    return number_of_MOs, excitations_to_perform, determinant
+
 def n_tuple_excitations(number_of_MOs, excitations_to_perform, determinant):
     """test simple n-tuple excitations from get_excitations function. ref_excitations correspond to
         4 fold excitation of determinant [1,-1,2,-2]"""
@@ -255,6 +263,16 @@ def cut_of_csfs(csf_coefficients, csfs, CI_coefficients,CI_coefficient_thresh):
     assert CI_coefficients_cut == ref_CI_coefficients_cut, "cutting of csfs with respect to the MO coefficients failed with respect to the cut CI coefficients"
 
 
+def n_tuple_excitations_with_reference(number_of_MOs, excitations_to_perform, determinant, reference_determinant):
+    """perform n-tuple excitation with electrons in orbitals that have not been excited with respect to the reference determinant."""
+    ref_excitations = [
+        [2, 3, -3, -4], [-1, 3, -3, 4], [2, -3, 4, -4], [1, 3, -3, -4], [1, -3, 4, -4]
+        ]
+        
+    excitations = sCI.get_excitations(number_of_MOs, excitations_to_perform, determinant, det_reference=reference_determinant)
+    print(excitations)
+    assert excitations == ref_excitations, "test for n-tuple excitation with respect to a reference determinant without symmetry failed"
+
 # test simple n-tuple excitations
 number_of_MOs, excitations_to_perform, determinant = test_set_1()
 n_tuple_excitations(number_of_MOs, excitations_to_perform, determinant)
@@ -287,3 +305,11 @@ sort_determinants_in_csfs(csf_coefficients,csfs)
 csf_coefficients, csfs, CI_coefficients = test_set_3()
 CI_coefficient_thresh = 1e-2
 cut_of_csfs(csf_coefficients, csfs, CI_coefficients,CI_coefficient_thresh)
+
+# test excitations that are performed from occupied orbitals from a reference determinant
+number_of_MOs, excitations_to_perform, determinant = test_set_4()
+reference_determinant = [1,-1,2,-2]
+n_tuple_excitations_with_reference(number_of_MOs, excitations_to_perform, determinant, reference_determinant)
+
+
+print("All tests passed ✅")

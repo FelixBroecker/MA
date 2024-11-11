@@ -4,7 +4,7 @@ from charactertables import CharacterTable
 from spincoupling import SpinCoupling
 
 
-class Generate_Determinants():
+class SelectedCI():
     """generate excited determinants"""
     def __init__(self):
         self.spinfuncs = SpinCoupling()
@@ -28,7 +28,7 @@ class Generate_Determinants():
         if verbose:
             print(out)
         if write_file:
-            with open("./csfs.out", "w") as printfile:
+            with open("sCI/csfs.out", "w") as printfile:
                 printfile.write(out)
 
     def read_AMOLQC_csfs(self, filename, n_elec, type="csf"):
@@ -40,7 +40,7 @@ class Generate_Determinants():
         csf_coefficient_tmp = []
         # read csfs
         if type == "csf":
-            with open("sCI/amolqc.wf", "r") as f:
+            with open(f"sCI/{filename}", "r") as f:
                 found_csf = False
                 for line in f:
                     if "$csfs" in line:
@@ -63,8 +63,8 @@ class Generate_Determinants():
                         else:
                             det = []
                             for i in range(1,len(entries)):
-                                if i < n_elec:
-                                    det.append(i * int(entries[i]))
+                                if i <= n_elec/2:
+                                    det.append(1 * int(entries[i]))
                                 else:
                                     det.append(-1 * int(entries[i]))
                             csf_coefficient_tmp.append(float(entries[0]))
@@ -76,8 +76,8 @@ class Generate_Determinants():
                                 csfs.append(csf_tmp)
                                 csf_coefficient_tmp = []
                                 csf_tmp = []
-                            if csf_counter == n_csfs:
-                                break
+                                if csf_counter == n_csfs:
+                                    break
         return csf_coefficients, csfs, CI_coefficients
     
 
@@ -413,73 +413,115 @@ class Generate_Determinants():
                 csf_determinants.append(csf_tmp)
                 csf_coefficients.append(coupling_coefficients[i])
         return csf_coefficients, csf_determinants
+    
+    def get_initial_wf(self, S, n_MO, initial_determinant, excitations, orbital_symmetry, total_symmetry, frozen_elecs, verbose=False):
+        """get initial wave function for selected Configuration Interaction in Amolqc format."""
+        determinant_basis = []
+        
+        # get excitation determinants from ground state HF determinant
+        excited_determinants = self.get_excitations(n_MO, excitations, initial_determinant, orbital_symmetry=orbital_symmetry, tot_sym=total_symmetry,core=frozen_elecs)
+        determinant_basis += [initial_determinant]
+        determinant_basis += excited_determinants
+        if verbose:
+            print(f"number of determinant basis: {len(determinant_basis)}")
+            print()
 
+        # form csfs from determinants in determinant basis
+        csf_coefficients, csfs = self.get_unique_csfs(determinant_basis, S, M_s) 
+        if verbose:
+            print(f"number of csfs {len(csf_coefficients)}")
+            print()
+
+        # sort determinants to obtain AMOLQC format
+        csf_coefficients, csfs = self.sort_determinants_in_csfs(csf_coefficients, csfs) 
+        
+        # generate MO initial list
+        CI_coefficients = [1 if n == 0 else 0 for n in range(len(csfs))]
+
+        # write wavefunction in AMOLQC format
+        self.write_AMOLQC(csf_coefficients, csfs, CI_coefficients) 
 
 if __name__ == "__main__":
     # set quantities
-    N = 4
-    n_MO = 4
+    N = 10
+    n_MO = 14
     S = 0
     M_s = 0
     CI_coefficient_thresh = 1e-2
+
     #orbital_symmetry = ['Ag', 'B1u', 'Ag', 'B2u', 'B3u', 'B1u', 'Ag', 'B2g', 'B3g', 'Ag', 'B1u', 'B1u'] # H2 TZPAE
     #orbital_symmetry =['Ag', 'B1u', 'Ag', 'B1u', 'B3u', 'B2u', 'Ag', 'B3g', 'B2g', 'B1u', 'B1u', 'B2u', 'Ag', 'B3g', 'B2g', 'Ag', 'B1u', 'B1g'] # N2 PBE0 TZPAE
     orbital_symmetry = ['A1', 'A1', 'B2', 'A1', 'B1', 'A1', 'B2', 'B2', 'A1', 'B1', 'A1', 'B2', 'A1', 'A1'] #H2O DZAE
-    tot_sym = "c2v"
-    orbital_symmetry =[]
+    total_symmetry = "c2v"
+    #orbital_symmetry =[]
+    frozen_elecs = [1,-1]
 
     # call own implementation
     
-    determinant = Generate_Determinants()
+    sCI = SelectedCI()
+    spinfuncs = SpinCoupling()
 
-    determinants = []
-    # get energy lowest determinant
-    det_ini = determinant.build_energy_lowest_detetminant(N)
-    print(det_ini)
-    core = [1,-1]
-    # get excitation determinants from ground state HF determinant
-    excitations = determinant.get_excitations(n_MO, [1,2], det_ini, orbital_symmetry=orbital_symmetry, tot_sym=tot_sym,core=core)
-    determinants += [det_ini]
-    determinants += excitations
-    print(f"number of determinant basis {len(determinants)}")
-    print(excitations)
+    # get HF determinant (energy lowest determinant)
+    initial_determinant = sCI.build_energy_lowest_detetminant(N)
 
-    # form csfs of this determinants
-    csf_coefficients, csfs = determinant.get_unique_csfs(determinants, S, M_s) 
+    # get initial wavefunction 
+    # sCI.get_initial_wf(S, n_MO, initial_determinant,[1,2], orbital_symmetry, total_symmetry,frozen_elecs,verbose = True)
 
-    # sort determinants to obtain AMOLQC format
-    csf_coefficients, csfs = determinant.sort_determinants_in_csfs(csf_coefficients, csfs) # TODO write test
-    print()
-    print(f"number of csfs {len(csf_coefficients)}")
-
-    # generate MO initial list
-    CI_coefficients = [1 if n == 0 else 0 for n in range(len(csfs))]
-    
-    # write wavefunction in AMOLQC format
-    determinant.write_AMOLQC(csf_coefficients, csfs, CI_coefficients) 
-    exit()
+    #print(csfs)
     ########################################
     # perform CI and Jas optimization
     ########################################
 
     # read wavefunction from 1. optimization
-    n_elec = 2
-    csf_coefficients, csfs, CI_coefficients = determinant.read_AMOLQC_csfs("amolqc.wf", n_elec) 
+    csf_coefficients, csfs, CI_coefficients = sCI.read_AMOLQC_csfs("fin_1-1.wf", N) 
+    print(len(csfs))
 
+    #CI_coefficient_matrix, transformation_matrix, det_basis = determinant.get_transformation_matrix(csf_coefficients, csfs,CI_coefficients)
+    #print(det_basis)
+    
     # cut of csfs
     cut_CI_coefficients = []
     cut_csf_coefficients = []
     cut_csfs = []
-    csf_coefficients, csfs, CI_coefficients, cut_csf_coeffs_tmp, cut_csfs_tmp, cut_CI_coeffs_tmp \
-    = determinant.cut_csfs(csf_coefficients, csfs, CI_coefficients, CI_coefficient_thresh) 
+    csf_coefficients_old, csfs_old, CI_coefficients_old, cut_csf_coeffs_tmp, cut_csfs_tmp, cut_CI_coeffs_tmp \
+    = sCI.cut_csfs(csf_coefficients, csfs, CI_coefficients, CI_coefficient_thresh) 
     
-    # TODO adapt function to do single and double excitations from HF ref only 
-    # Test first
-    det = [1,-1,2,-3]
-    det_reference = [1,-1,2,-2]
-    determinants = determinant.get_excitations(n_MO,[2],det, det_reference=det_reference)
-    print("After cutting")
-    print(determinants)
+
+    # expand csfs in determinants 
+    CI_mat, trans_mat, determinant_basis = sCI.get_transformation_matrix(csf_coefficients_old, csfs_old, CI_coefficients_old)
+    excitations = []
+    det_reference = [1, 2, 3, 4, 5, -1, -2, -3, -4, -5]
+    for det in determinant_basis:
+        determinants = sCI.get_excitations(n_MO,[1,2],det, \
+                det_reference=det_reference,orbital_symmetry=orbital_symmetry, tot_sym=total_symmetry,core=frozen_elecs)
+        excitations += determinants
+    all_determinants = excitations
+    all_determinants = spinfuncs.remove_duplicates(all_determinants)
+    print(len(all_determinants))
+    #print(all_determinants[28])
+    
+    # form csfs of this determinants
+    csf_coefficients, csfs = sCI.get_unique_csfs(all_determinants, S, M_s) 
+
+    
+    # sort determinants to obtain AMOLQC format
+    csf_coefficients, csfs = sCI.sort_determinants_in_csfs(csf_coefficients, csfs) 
+    print()
+    print(f"number of csfs {len(csf_coefficients)}")
+    
+    # generate MO initial list
+    CI_coefficients = [0 for _ in range(len(csfs))]
+    csfs = csfs_old + csfs
+    csf_coefficients = csf_coefficients_old + csf_coefficients
+    CI_coefficients = CI_coefficients_old + CI_coefficients
+    # keep old coefficients as guess
+    print(len(CI_coefficients))
+    
+    # write wavefunction in AMOLQC format
+    #sCI.write_AMOLQC(csf_coefficients, csfs, CI_coefficients) 
+    exit()
+    #print("After cutting")
+    #print(determinants)
 
     # perform single and double excitations of determinants
 

@@ -56,11 +56,21 @@ class SpinCoupling():
     
     def C_plus(self,S,M,sgm):
         """Clebsch Gordan coefficients for spin addition"""
-        return np.sqrt((S+2*sgm*M)/(2*S))
+        #print(f"S {S}\n M {M}  \n sgm {sgm} \n")
+        res = (S+2*sgm*M)/(2*S)
+        if res<0:
+            #print(res)
+            print(f"{res} with M {M}, sgm {sgm} S {S}")
+        #assert res < 0, "Square root in computation  of Clebsch Gordan Coefficient cannot be zero."
+        return np.sqrt(res)
 
     def C_minus(self,S,M,sgm):
         """Clebsch Gordan coefficients for spin addition"""
-        return -2* sgm * np.sqrt((S+1 -2*sgm*M)/(2*(S+1)))
+        res = (S+1 -2*sgm*M)/(2*(S+1))
+        if res< 0:
+            print(f"{res} with M {M}, sgm {sgm} S {S}")
+        #assert res < 0, "Square root in computation  of Clebsch Gordan Coefficient cannot be zero."
+        return -2* sgm * np.sqrt(res)
 
     def proj_prim_spin(self, uncoupled, coupled):
         """compute contibution of single primitive spin function of csf."""

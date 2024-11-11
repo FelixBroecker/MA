@@ -1,8 +1,8 @@
 #import pytest
-from my_csf import Generate_Determinants
+from my_csf import SelectedCI
 #from my_csf import *
 
-sCI = Generate_Determinants()
+sCI = SelectedCI()
 
 #@pytest.fixture
 def test_set_1():
@@ -270,7 +270,6 @@ def n_tuple_excitations_with_reference(number_of_MOs, excitations_to_perform, de
         ]
         
     excitations = sCI.get_excitations(number_of_MOs, excitations_to_perform, determinant, det_reference=reference_determinant)
-    print(excitations)
     assert excitations == ref_excitations, "test for n-tuple excitation with respect to a reference determinant without symmetry failed"
 
 

@@ -56,20 +56,20 @@ class SpinCoupling():
     
     def C_plus(self,S,M,sgm):
         """Clebsch Gordan coefficients for spin addition"""
-        #print(f"S {S}\n M {M}  \n sgm {sgm} \n")
         res = (S+2*sgm*M)/(2*S)
-        if res<0:
-            #print(res)
-            print(f"{res} with M {M}, sgm {sgm} S {S}")
-        #assert res < 0, "Square root in computation  of Clebsch Gordan Coefficient cannot be zero."
+        # intermediate spin projection is not allowed to exceed the total spin
+        if abs(M)>S:
+            return 0
+        assert res >= 0, "Square root in computation  of Clebsch Gordan Coefficient cannot be zero."
         return np.sqrt(res)
 
     def C_minus(self,S,M,sgm):
         """Clebsch Gordan coefficients for spin addition"""
         res = (S+1 -2*sgm*M)/(2*(S+1))
-        if res< 0:
-            print(f"{res} with M {M}, sgm {sgm} S {S}")
-        #assert res < 0, "Square root in computation  of Clebsch Gordan Coefficient cannot be zero."
+        # intermediate spin projection is not allowed to exceed the total spin
+        if abs(M)>S:
+            return 0
+        assert res >= 0, "Square root in computation of Clebsch Gordan Coefficient cannot be zero."
         return -2* sgm * np.sqrt(res)
 
     def proj_prim_spin(self, uncoupled, coupled):
@@ -89,6 +89,7 @@ class SpinCoupling():
                 coupled_s.append(item*.5)
             else:
                 coupled_s.append(item*.5+coupled_s[i-1])
+        
         # compute coefficients
         prod = 1
         ref_uncoupled = 0
@@ -176,15 +177,15 @@ class SpinCoupling():
                 coeff_tmp = []
                 primitives_tmp = []
                 for primitive in primitive_spin:
-                    if sum(primitive)* .5 == M_s:
-                        return_csf = True
-                    else:
-                        return_csf = False
                     coeff = self.proj_prim_spin(primitive, path)
                     # append coefficients and spin functions if coefficient not 0  
                     if coeff:
                         coeff_tmp.append(coeff)
                         primitives_tmp.append(primitive)
+                if sum(primitive)* .5 == M_s:
+                    return_csf = True
+                else:
+                    return_csf = False
                 # add only to return list, if M_s corresponds to input 
                 if return_csf:
                     csf_paths.append(path)
@@ -192,3 +193,7 @@ class SpinCoupling():
                     csf_primitives.append(primitives_tmp)
 
         return csf_paths, csf_primitives, csf_coefficients
+    
+spinfunc = SpinCoupling()
+path, csfs, csf_coeffs  = spinfunc.get_all_csfs(8,0,0)
+#spinfunc.print_csfs(path, csfs, csf_coeffs)

@@ -15,7 +15,9 @@ class CharacterTable:
         if self.point_group == "d2h":
             self.d2h()
         if self.point_group == "c2v":
-            self.c2v()    
+            self.c2v()   
+        if self.point_group == "d4h":
+            self.d4h()        
     
     def multiply(self, characters_1, characters_2):
         """elementwise character multiplication of two irreps"""
@@ -70,6 +72,58 @@ class CharacterTable:
             "B3u": [],
         }
         self.order = 8
+    
+    def d4h(self):
+        """load character table d4h"""
+        self.operations = [
+            "1 E",
+            "2 C4_z",
+            "1 C2",
+            "2 Cprim2",
+            "2 Cprimprim2",
+            "1 i",
+            "2 S4",
+            "1 sh",
+            "2 sv",
+            "2 sd",
+            ]
+        self.characters = {
+            "A1g": [1,1,1,1,1,1,1,1,1,1],
+            "A2g": [1,1,1,-1,-1,1,1,1,-1,-1],
+            "B1g": [1,-1,1,1,-1,1,-1,1,1,-1],
+            "B2g": [1,-1,1,-1,1,1,-1,1,-1,1],
+            "Eg" : [2,0,-2,0,0,2,0,-2,0,0],
+            "A1u": [1,1,1,1,1,-1,-1,-1,-1,-1,],
+            "A2u": [1,1,1,-1,-1,-1,-1,-1,1,1],
+            "B1u": [1,-1,1,1,-1,-1,1,-1,-1,1],
+            "B2u": [1,-1,1,-1,1,-1,1,-1,1,-1],
+            "Eu" : [2,0,-2,0,0,-2,0,2,0,0],
+        }
+        self.linear_funcs = {
+            "A1g": [],
+            "A2g": ["Rz"],
+            "B1g": [],
+            "B2g": [],
+            "Eg" : ["Rx","Ry"],
+            "A1u": [],
+            "A2u": ["z"],
+            "B1u": [],
+            "B2u": [],
+            "Eu" : ["x","y"],
+        }
+        self.quadratic_funcs = {
+            "A1g": ["xx+yy", "zz"],
+            "A2g": [],
+            "B1g": ["xx-yy"],
+            "B2g": ["xy"],
+            "Eg" : ["xz", "yz"],
+            "A1u": [],
+            "A2u": [],
+            "B1u": [],
+            "B2u": [],
+            "Eu" : [],
+        }
+        self.order = 16
 
     def c2v(self):
         """load character table c2v"""

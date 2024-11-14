@@ -243,7 +243,7 @@ class SelectedCI():
         return det
     
 
-    def get_excitations(self, n_orbitals, excitations, det_ini, orbital_symmetry=[], tot_sym="",det_reference=[], core=[]):
+    def get_excitations(self, n_orbitals, excitations, det_ini, orbital_symmetry=[], tot_sym="",det_reference=[], core=[],frozen_MOs=[]):
         """create all excitation determinants"""
 
         # all unoccupied MOs are virtual orbitals
@@ -278,6 +278,10 @@ class SelectedCI():
             for idx, i in enumerate(det_ini):
                 if i in core:
                     occ_mask[idx] = False
+        if frozen_MOs:
+            for idx, i in enumerate(virtuals):
+                if i in frozen_MOs:
+                    virt_mask[idx] = False
 
         # generate all required excitations on initial determinant
         excited_determinants = []
@@ -415,12 +419,12 @@ class SelectedCI():
                 csf_coefficients.append(coupling_coefficients[i])
         return csf_coefficients, csf_determinants
     
-    def get_initial_wf(self, S, n_MO, initial_determinant, excitations, orbital_symmetry, total_symmetry, frozen_elecs, verbose=False):
+    def get_initial_wf(self, S, n_MO, initial_determinant, excitations, orbital_symmetry, total_symmetry, frozen_elecs, frozen_MOs,verbose=False):
         """get initial wave function for selected Configuration Interaction in Amolqc format."""
         determinant_basis = []
         
         # get excitation determinants from ground state HF determinant
-        excited_determinants = self.get_excitations(n_MO, excitations, initial_determinant, orbital_symmetry=orbital_symmetry, tot_sym=total_symmetry,core=frozen_elecs)
+        excited_determinants = self.get_excitations(n_MO, excitations, initial_determinant, orbital_symmetry=orbital_symmetry, tot_sym=total_symmetry,core=frozen_elecs,frozen_MOs=frozen_MOs)
         determinant_basis += [initial_determinant]
         determinant_basis += excited_determinants
         if verbose:
@@ -452,10 +456,19 @@ if __name__ == "__main__":
 
     #orbital_symmetry = ['Ag', 'B1u', 'Ag', 'B2u', 'B3u', 'B1u', 'Ag', 'B2g', 'B3g', 'Ag', 'B1u', 'B1u'] # H2 TZPAE
     #orbital_symmetry =['Ag', 'B1u', 'Ag', 'B1u', 'B3u', 'B2u', 'Ag', 'B3g', 'B2g', 'B1u', 'B1u', 'B2u', 'Ag', 'B3g', 'B2g', 'Ag', 'B1u', 'B1g'] # N2 PBE0 TZPAE
+    #orbital_symmetry= ['A1g', 'A2u', 'A1g', 'A2u',  'Eu', 'Eu', 'A1g', 'Eg', 'Eg', 'A2u', 'Eu', 'Eu', 'A1g', 'A1g', 'Eg', 'Eg', 'A2u', 'A2u', 'A1g', 'A2u' ] # N2 PBE0 DZAE d4h 
+   # orbital_symmetry = ['A1', 'A1', 'B2', 'A1', 'B1', 'A1', 'B2', 'A1', 'B2', 'A1', 'B1', 'A1', 'B2', 'A2', 
+   #                     'B1', 'A1', 'B2', 'B2', 'A1', 'B1', 'A2', 'A1', 'A1', 'A1', 'B2', 'B2', 'B1', 'A1',
+   #                     'B2', 'A1', 'A1'
+   #                     ] #H2O TZPAE
+   # orbital_symmetry = []
+    
     orbital_symmetry = ['A1', 'A1', 'B2', 'A1', 'B1', 'A1', 'B2', 'B2', 'A1', 'B1', 'A1', 'B2', 'A1', 'A1'] #H2O DZAE
+
     total_symmetry = "c2v"
+
     #orbital_symmetry =[]
-    frozen_elecs = [1,-1]
+
 
     # call own implementation
     
@@ -466,15 +479,40 @@ if __name__ == "__main__":
     initial_determinant = sCI.build_energy_lowest_detetminant(N)
 
     # get initial wavefunction 
-    # TODO can be switched on sCI.get_initial_wf(S, n_MO, initial_determinant,[1,2], orbital_symmetry, total_symmetry,frozen_elecs,verbose = True)
+    # TODO can be switched on
 
+    ########
+    # water
+    ########
+    #orbital_symmetry = ['A1', 'A1', 'B2', 'A1', 'B1', 'A1', 'B2', 'A1', 'B2', 'A1', 'B1', 'A1', 'B2', 'A2', 
+    #                    'B1', 'A1', 'B2', 'B2', 'A1', 'B1', 'A2', 'A1', 'A1', 'A1', 'B2', 'B2', 'B1', 'A1',
+    #                    'B2', 'A1', 'A1'
+    #                    ] #H2O TZPAE
+    orbital_symmetry = ['A1', 'A1', 'B2', 'A1', 'B1', 'A1', 'B2', 'B2', 'A1', 'B1', 'A1', 'B2', 'A1', 'A1'] #H2O DZAE
+    sCI.get_initial_wf(S, n_MO, initial_determinant,[1,2], orbital_symmetry, "c2v",[1,-1],[],verbose = True)
+
+    #########
+    # ethene
+    #########
+    #orbital_symmetry = [
+    #    'Ag','B1u','Ag','B1u','B2u','Ag','B3g','B3u','B2g','Ag','B1u','B2u','B3g',
+    #    'B1u','B2u','B3u','Ag','Ag','B1u','B2g','Ag','B3g','B2u','B1u','B1u','B3g',
+    #    'Ag','B1u',
+    #] # ethene DZAE
+
+    ######
+    # nitrogen
+    ######
+
+    
+    #sCI.get_initial_wf(S, n_MO, initial_determinant,[1,2], orbital_symmetry, "d2h",[1,-1,2,-2],[23,-23,24,-24,25,-25,26,-26,27,-27,28,-28],verbose = True)
     #print(csfs)
     ########################################
     # perform CI and Jas optimization
     ########################################
 
     # read wavefunction from 1. optimization
-    csf_coefficients, csfs, CI_coefficients = sCI.read_AMOLQC_csfs("fin_1-1.wf", N) 
+    csf_coefficients, csfs, CI_coefficients = sCI.read_AMOLQC_csfs("fin_1-1_000.wf", N) 
     print(f"number of initial csfs from 1. iteration {len(csfs)}")
     # cut of csfs
     cut_CI_coefficients = []
@@ -482,7 +520,8 @@ if __name__ == "__main__":
     cut_csfs = []
     csf_coefficients_old, csfs_old, CI_coefficients_old, cut_csf_coeffs_tmp, cut_csfs_tmp, cut_CI_coeffs_tmp \
     = sCI.cut_csfs(csf_coefficients, csfs, CI_coefficients, CI_coefficient_thresh) 
-    
+
+    sCI.write_AMOLQC(csf_coefficients_old, csfs_old, CI_coefficients_old) 
     #csf_coefficients, csfs = sCI.sort_determinants_in_csfs(csf_coefficients_old, csfs_old)
     #CI_coefficients = [0 for _ in range(len(csfs))]
     #sCI.write_AMOLQC(csf_coefficients, csfs, CI_coefficients) 
@@ -493,7 +532,7 @@ if __name__ == "__main__":
     det_reference = [1, 2, 3, 4, 5, -1, -2, -3, -4, -5]
     for det in determinant_basis:
         determinants = sCI.get_excitations(n_MO,[1,2],det, \
-                det_reference=det_reference,orbital_symmetry=orbital_symmetry, tot_sym=total_symmetry,core=frozen_elecs)
+                det_reference=det_reference,orbital_symmetry=orbital_symmetry, tot_sym=total_symmetry,core=[1,-1], frozen_MOs=[12,-12,14,-14])
         excitations += determinants
 
    

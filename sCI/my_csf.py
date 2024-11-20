@@ -585,63 +585,135 @@ class SelectedCI():
             sCI.write_AMOLQC(csf_coefficients, csfs, CI_coefficients, file_name=f"{filename_optimized}_1.wf")  
         sCI.write_AMOLQC(csf_coefficients_discarded_all, csfs_discarded_all, CI_coefficients_discarded_all, file_name=f"{filename_discarded_all}_1.wf")  
 
+    def plot_ci_coefficients(self,wavefunction_name, n_elec):
+        """plot ci coefficients of wavefunction"""
+        import matplotlib.pyplot as plt
+
+        csf_coefficients, csfs, CI_coefficients = sCI.read_AMOLQC_csfs(f"{wavefunction_name}.wf", n_elec) 
+        # sort CI coefficients from largest to smallest absolut value and respectively csfs and csf_coefficients
+        CI_coefficients_abs = -np.abs(np.array(CI_coefficients))
+        idx = CI_coefficients_abs.argsort()
+
+        CI_coefficients = [abs(CI_coefficients[i]) for i in idx]
+        csf_coefficients = [csf_coefficients[i] for i in idx]
+        csfs = [csfs[i] for i in idx]
+
+        #plot ci coefficients
+        plt.rcParams['figure.figsize'] = (10, 6.5)
+        plt.rcParams['font.size'] = 16
+        plt.rcParams['lines.linewidth'] = 3
+        plt.rcParams['font.family'] = 'Avenir'
+        plt.rcParams['mathtext.fontset'] =  'dejavuserif'
+        plt.rc ('axes', titlesize = 16)
+        plt.rc ('axes', labelsize = 16)
+        plt.rc('axes', linewidth=2)
+        color = []
+        ref_state = self.build_energy_lowest_detetminant(n_elec)
+        # color ci points by respective excitation
+        for csf in csfs:
+            difference = 0
+            for electron in csf[0]:
+                if electron not in ref_state:
+                    difference +=1
+            if difference == 1:
+                color.append('darkred')
+            elif difference == 2:
+                color.append('grey')
+            elif difference == 3:
+                color.append('teal')
+            elif difference == 4:
+                color.append('orange')
+            else:
+                color.append('fuchsia')
+
+        plt.xlabel('determinant idx [ ]', labelpad = 15)
+        plt.ylabel('CI coefficients [ ]', labelpad = 15)
+        plt.scatter(
+            range(len(CI_coefficients)-1),CI_coefficients[1:], 
+            s=15, marker=".", color=color[1:], label="CI coefficients"
+            )
+        plt.legend( loc='upper right',)
+        plt.savefig(f'{wavefunction_name}.png', format = 'png', bbox_inches='tight', dpi = 450)
+
 if __name__ == "__main__":
-    # set quantities
-    N = 10
-    n_MO = 14
-    S = 0
-    M_s = 0
-    CI_coefficient_thresh = 1e-2
+
+    sCI = SelectedCI()
+    spinfuncs = SpinCoupling()
+
+    print("Script to obtain selected configuration interaction (sCI) wave functions in Quantum Monte Carlo.")
+    print("Select one from the following options by entering the respective integer:")
+    print(" 1\tgenerate initial wave function")
+    print(" 2\tgenerate next sCI iteration by excitations on determinants in selected csfs.")
+    print(" 3\tgenerate next blocked wavefunction within one iteration.")
+    print(" 4\tplot wave function coefficients.")
+    print()
+    wavefunction_choice = int(input())
+
+    if wavefunction_choice == 4:
+        wavefunction_name = input("enter wave function name (without .wf).\n")
+        n_elec = int(input("number of electrons\n"))
+        sCI.plot_ci_coefficients(wavefunction_name,n_elec)
+        exit(1)
+    
+    print("Choose molecule in DZae basis that are currently available.")
+    print(" 1\twater")
+    print(" 2\tethene")
+    molecule_choice = int(input())
+
+    print("split wavefunction in two parts. size of first wave function part: (enter 0 to take full wave function)")
+    split_at = int(input())
+
+    # set molecule quantities
+    if molecule_choice == 1:
+        # water
+        N = 10
+        n_MO = 14
+        S = 0
+        M_s = 0
+        frozen_elecs = [1,-1]
+        orbital_symmetry = ['A1', 'A1', 'B2', 'A1', 'B1', 'A1', 'B2', 'B2', 'A1', 'B1', 'A1', 'B2', 'A1', 'A1'] #H2O DZAE
+        total_symmetry = "c2v"
+
+    elif molecule_choice == 2:
+        # ethene
+        N = 16
+        n_MO = 28
+        S = 0
+        M_s = 0
+        frozen_elecs = [1,-1,2,-2]
+        orbital_symmetry = [
+            'Ag','B1u','Ag','B1u','B2u','Ag','B3g','B3u','B2g','Ag','B1u','B2u','B3g',
+            'B1u','B2u','B3u','Ag','Ag','B1u','B2g','Ag','B3g','B2u','B1u','B1u','B3g',
+            'Ag','B1u',
+        ] # ethene DZAE
+        total_symmetry = "d2h"
 
     #orbital_symmetry = ['Ag', 'B1u', 'Ag', 'B2u', 'B3u', 'B1u', 'Ag', 'B2g', 'B3g', 'Ag', 'B1u', 'B1u'] # H2 TZPAE
     #orbital_symmetry =['Ag', 'B1u', 'Ag', 'B1u', 'B3u', 'B2u', 'Ag', 'B3g', 'B2g', 'B1u', 'B1u', 'B2u', 'Ag', 'B3g', 'B2g', 'Ag', 'B1u', 'B1g'] # N2 PBE0 TZPAE
-    
    # orbital_symmetry = ['A1', 'A1', 'B2', 'A1', 'B1', 'A1', 'B2', 'A1', 'B2', 'A1', 'B1', 'A1', 'B2', 'A2', 
    #                     'B1', 'A1', 'B2', 'B2', 'A1', 'B1', 'A2', 'A1', 'A1', 'A1', 'B2', 'B2', 'B1', 'A1',
    #                     'B2', 'A1', 'A1'
    #                     ] #H2O TZPAE
+   # orbital_symmetry = ['A1', 'A1', 'B2', 'A1', 'B1', 'A1', 'B2', 'B2', 'A1', 'B1', 'A1', 'B2', 'A1', 'A1'] #H2O DZAE
    # orbital_symmetry = []
-    
-    #orbital_symmetry = ['A1', 'A1', 'B2', 'A1', 'B1', 'A1', 'B2', 'B2', 'A1', 'B1', 'A1', 'B2', 'A1', 'A1'] #H2O DZAE
-
-    #total_symmetry = "c2v"
-
-    #orbital_symmetry =[]
-
-
-    # call own implementation
-    
-    sCI = SelectedCI()
-    spinfuncs = SpinCoupling()
 
     # get HF determinant (energy lowest determinant)
     initial_determinant = sCI.build_energy_lowest_detetminant(N)
 
-    # get initial wavefunction 
-    # TODO can be switched on
 
-    ########
-    # WATER
-    ########
-    #orbital_symmetry = ['A1', 'A1', 'B2', 'A1', 'B1', 'A1', 'B2', 'A1', 'B2', 'A1', 'B1', 'A1', 'B2', 'A2', 
-    #                    'B1', 'A1', 'B2', 'B2', 'A1', 'B1', 'A2', 'A1', 'A1', 'A1', 'B2', 'B2', 'B1', 'A1',
-    #                    'B2', 'A1', 'A1'
-    #                    ] #H2O TZPAE
-    if False:
-        orbital_symmetry = ['A1', 'A1', 'B2', 'A1', 'B1', 'A1', 'B2', 'B2', 'A1', 'B1', 'A1', 'B2', 'A1', 'A1'] #H2O DZAE
-        total_symmetry = "c2v"
-    #sCI.get_initial_wf(S, n_MO, initial_determinant,[1,2], orbital_symmetry, "c2v",[1,-1],[],verbose = True)
+    if wavefunction_choice == 1:
+        sCI.get_initial_wf(S, n_MO, initial_determinant,[1,2], orbital_symmetry, total_symmetry,frozen_elecs,[],split_at=split_at,verbose = True)
+    elif wavefunction_choice == 2:
+        wavefunction_name = input("enter wave function name (without .wf).\n")
+        CI_coefficient_thresh = float(input("enter CI coefficient threshold to select csfs."))
+        sCI.select_and_do_excitations(N,n_MO,S,M_s,initial_determinant,[1,2],orbital_symmetry,total_symmetry,
+                                      frozen_elecs,[],wavefunction_name,CI_coefficient_thresh,split_at=split_at,verbose=True)
+    elif wavefunction_choice == 3:
+        wavefunction_name = input("enter wave function name (without .wf).\n")
+        CI_coefficient_thresh = float(input("enter CI coefficient threshold to select csfs.\n"))
+        n_min = int(input("enter minimum number of csfs that shall be selected."))
+        sCI.select_and_do_next_package("discarded", wavefunction_name, "residual", CI_coefficient_thresh, split_at=split_at,n_min=n_min, verbose=True)
 
-    #########
-    # ETHENE
-    #########
-    #orbital_symmetry = [
-    #    'Ag','B1u','Ag','B1u','B2u','Ag','B3g','B3u','B2g','Ag','B1u','B2u','B3g',
-    #    'B1u','B2u','B3u','Ag','Ag','B1u','B2g','Ag','B3g','B2u','B1u','B1u','B3g',
-    #    'Ag','B1u',
-    #] # ethene DZAE
-    #sCI.get_initial_wf(S, n_MO, initial_determinant,[1,2], orbital_symmetry, "d2h",[1,-1,2,-2],[],verbose = True, split_at=150)
-    #exit()
 
     ######
     # NITROGEN 2
@@ -669,7 +741,7 @@ if __name__ == "__main__":
     ########################################
     # Section to obtain next package of csfs in one iteration 
     ########################################
-    if True:
+    if False:
         N = 10
         n_MO = 14
         S = 0

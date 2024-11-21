@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import numpy as np
 from fractions import Fraction
 from charactertables import CharacterTable
@@ -419,7 +421,7 @@ class SelectedCI():
                 csf_coefficients.append(coupling_coefficients[i])
         return csf_coefficients, csf_determinants
     
-    def get_initial_wf(self, S, n_MO, initial_determinant, excitations, orbital_symmetry, total_symmetry, frozen_elecs, frozen_MOs,split_at=0,verbose=False):
+    def get_initial_wf(self, S, n_MO, initial_determinant, excitations, orbital_symmetry, total_symmetry, frozen_elecs, frozen_MOs,filename,split_at=0,verbose=False):
         """get initial wave function for selected Configuration Interaction in Amolqc format."""
         determinant_basis = []
         
@@ -445,15 +447,15 @@ class SelectedCI():
 
         if split_at>0:
             # prints csfs inlcusive the indice of split at in first wf and residual in second
-            self.write_AMOLQC(csf_coefficients[:split_at], csfs[:split_at], CI_coefficients[:split_at:],file_name="sCI/csfs_1.out")   
-            self.write_AMOLQC(csf_coefficients[split_at:], csfs[split_at:], CI_coefficients[split_at:],file_name="sCI/csfs_2.out")   
+            self.write_AMOLQC(csf_coefficients[:split_at], csfs[:split_at], CI_coefficients[:split_at:],file_name=f"{filename}.wf")   
+            self.write_AMOLQC(csf_coefficients[split_at:], csfs[split_at:], CI_coefficients[split_at:],file_name="residual.wf")   
             if verbose:
                 print(f"number of csfs in wf 1: {len(csf_coefficients[:split_at])}")
                 print(f"number of csfs in wf 2: {len(csf_coefficients[split_at:])}")
                 print()
         else:
             # write wavefunction in AMOLQC format
-            self.write_AMOLQC(csf_coefficients, csfs, CI_coefficients) 
+            self.write_AMOLQC(csf_coefficients, csfs, CI_coefficients, file_name=f"{filename}.wf") 
         
 
     def select_and_do_excitations(
@@ -524,42 +526,49 @@ class SelectedCI():
         # write wavefunction in AMOLQC format
         if split_at>0:
             # prints csfs inlcusive the indice of split at in first wf and residual in second
-            sCI.write_AMOLQC(csf_coefficients[:split_at], csfs[:split_at], CI_coefficients[:split_at:],file_name=f"{input_wf}_next_it.wf")   
-            sCI.write_AMOLQC(csf_coefficients[split_at:], csfs[split_at:], CI_coefficients[split_at:],file_name=f"{input_wf}_residual.wf")   
+            sCI.write_AMOLQC(csf_coefficients[:split_at], csfs[:split_at], CI_coefficients[:split_at:],file_name=f"sCI_{input_wf}_next_it.wf")   
+            sCI.write_AMOLQC(csf_coefficients[split_at:], csfs[split_at:], CI_coefficients[split_at:],file_name=f"sCI_{input_wf}_residual.wf")   
             if verbose:
                 print(f"number of csfs in next iteration wf: {len(csf_coefficients[:split_at])}")
                 print(f"number of csfs in residual wf: {len(csf_coefficients[split_at:])}")
                 print()
         else:
             # write wavefunction in AMOLQC format
-            sCI.write_AMOLQC(csf_coefficients, csfs, CI_coefficients, file_name=f"{input_wf}_next_it.wf") 
+            sCI.write_AMOLQC(csf_coefficients, csfs, CI_coefficients, file_name=f"sCI_{input_wf}_next_it.wf") 
     
     def select_and_do_next_package(self, filename_discarded_all, filename_optimized, filename_residual, CI_coefficient_thresh,split_at=0, n_min=0, verbose=False):
         """select csfs by size of their coefficients and add next package of already generated csfs."""
         # read in all three csf files with already discarded csfs, not-yet-selected csfs and not-yet-optimized csfs
         no_file_for_discarded = False
-        if n_min>0:
-            ensure_minimal_number = True
-        
+
         try:
-           csf_coefficients_discarded_all, csfs_discarded_all, CI_coefficients_discarded_all = sCI.read_AMOLQC_csfs(f"{filename_discarded_all}.wf", N) 
+            csf_coefficients_discarded_all, csfs_discarded_all, CI_coefficients_discarded_all = sCI.read_AMOLQC_csfs(f"{filename_discarded_all}.wf", N)    
+            csf_coefficients_discarded_all, csfs_discarded_all, CI_coefficients_discarded_all , _, _, _ \
+        = sCI.cut_csfs(csf_coefficients_discarded_all, csfs_discarded_all, CI_coefficients_discarded_all, 0.0) 
         except:
             FileNotFoundError
             csf_coefficients_discarded_all, csfs_discarded_all, CI_coefficients_discarded_all = [],[],[]
+            print(f"no file {filename_discarded_all}.wf . Thus it is going to be generated for this selection.")
             #no_file_for_discarded = True
 
         csf_coefficients_optimized, csfs_optimized, CI_coefficients_optimized = sCI.read_AMOLQC_csfs(f"{filename_optimized}.wf", N) 
-        csf_coefficients_residual, csfs_residual, CI_coefficients_residual = sCI.read_AMOLQC_csfs(f"{filename_residual}.wf", N) 
+        try:
+            csf_coefficients_residual, csfs_residual, CI_coefficients_residual = sCI.read_AMOLQC_csfs(f"{filename_residual}.wf", N) 
+        except:
+            FileNotFoundError
+            csf_coefficients_residual, csfs_residual, CI_coefficients_residual = [],[],[]
+            print(f"no file {filename_residual}.wf . Thus it is going to ignored.")
         #
         csf_coefficients_selected, csfs_selected, CI_coefficients_selected, csf_coefficients_discarded, csfs_discarded, CI_coefficients_discarded \
         = sCI.cut_csfs(csf_coefficients_optimized, csfs_optimized, CI_coefficients_optimized, CI_coefficient_thresh) 
 
         # take n_min number of csfs by largest CI coefficients
-        if ensure_minimal_number and len(csfs_selected) < n_min:
+        if len(csfs_selected) < n_min:
             csf_coefficients_selected, csfs_selected, CI_coefficients_selected, _, _, _ \
         = sCI.cut_csfs(csf_coefficients_optimized, csfs_optimized, CI_coefficients_optimized, 0.0) 
+            csf_coefficients_discarded, csfs_discarded, CI_coefficients_discarded = csf_coefficients_selected[n_min:], csfs_selected[n_min:], CI_coefficients_selected[n_min:]
             csf_coefficients_selected, csfs_selected, CI_coefficients_selected = csf_coefficients_selected[:n_min], csfs_selected[:n_min], CI_coefficients_selected[:n_min]
-        print(len(csfs_selected))
+        print(f"number of selected csfs {len(csfs_selected)}")
         # full wavefunction without already discarded csfs
         csf_coefficients = csf_coefficients_selected + csf_coefficients_residual
         csfs = csfs_selected + csfs_residual
@@ -574,16 +583,24 @@ class SelectedCI():
         #print wavefunctions
         if split_at>0:
             # prints csfs inlcusive the indice of split at in first wf and residual in second
-            sCI.write_AMOLQC(csf_coefficients[:split_at], csfs[:split_at], CI_coefficients[:split_at:],file_name=f"{filename_optimized}_1.wf")   
-            sCI.write_AMOLQC(csf_coefficients[split_at:], csfs[split_at:], CI_coefficients[split_at:],file_name=f"{filename_residual}_1.wf")   
+            sCI.write_AMOLQC(csf_coefficients[:split_at], csfs[:split_at], CI_coefficients[:split_at:],file_name=f"sCI_{filename_optimized}_1.wf")   
+            sCI.write_AMOLQC(csf_coefficients[split_at:], csfs[split_at:], CI_coefficients[split_at:],file_name=f"sCI_{filename_residual}_1.wf")   
             if verbose:
                 print(f"number of csfs in next iteration wf: {len(csf_coefficients[:split_at])}")
                 print(f"number of csfs in residual wf: {len(csf_coefficients[split_at:])}")
                 print()
         else:
             # write wavefunction in AMOLQC format
-            sCI.write_AMOLQC(csf_coefficients, csfs, CI_coefficients, file_name=f"{filename_optimized}_1.wf")  
-        sCI.write_AMOLQC(csf_coefficients_discarded_all, csfs_discarded_all, CI_coefficients_discarded_all, file_name=f"{filename_discarded_all}_1.wf")  
+            sCI.write_AMOLQC(csf_coefficients, csfs, CI_coefficients, file_name=f"sCI_{filename_optimized}_1.wf")  
+        sCI.write_AMOLQC(csf_coefficients_discarded_all, csfs_discarded_all, CI_coefficients_discarded_all, file_name=f"sCI_{filename_discarded_all}_1.wf")  
+        
+        # print info file
+        with open("sCI_info.txt", 'w') as reffile:
+            reffile.write(f"""selected csfs:\t{len(csfs_selected)}
+threshold:\t{CI_coefficient_thresh}
+number of csfs in next iteration wf:\t{len(csf_coefficients[:split_at])}
+number of csfs in residual wf:\t{len(csf_coefficients[split_at:])}
+ """)
 
     def plot_ci_coefficients(self,wavefunction_name, n_elec):
         """plot ci coefficients of wavefunction"""
@@ -602,7 +619,7 @@ class SelectedCI():
         plt.rcParams['figure.figsize'] = (10, 6.5)
         plt.rcParams['font.size'] = 16
         plt.rcParams['lines.linewidth'] = 3
-        plt.rcParams['font.family'] = 'Avenir'
+        #plt.rcParams['font.family'] = 'Avenir'
         plt.rcParams['mathtext.fontset'] =  'dejavuserif'
         plt.rc ('axes', titlesize = 16)
         plt.rc ('axes', labelsize = 16)
@@ -623,6 +640,10 @@ class SelectedCI():
                 color.append('teal')
             elif difference == 4:
                 color.append('orange')
+            elif difference == 5:
+                color.append('blue')
+            elif difference == 6:
+                color.append('lime')
             else:
                 color.append('fuchsia')
 
@@ -633,12 +654,18 @@ class SelectedCI():
             s=15, marker=".", color=color[1:], label="CI coefficients"
             )
         plt.legend( loc='upper right',)
-        plt.savefig(f'{wavefunction_name}.png', format = 'png', bbox_inches='tight', dpi = 450)
+        plt.savefig(f'sCI_{wavefunction_name}.png', format = 'png', bbox_inches='tight', dpi = 450)
 
 if __name__ == "__main__":
 
     sCI = SelectedCI()
     spinfuncs = SpinCoupling()
+
+    #csf_coefficients, csfs, CI_coefficients = sCI.read_AMOLQC_csfs(f"block_final.wf", 10) 
+    #csf_coefficients, csfs, CI_coefficients, _, _, _ \
+    #= sCI.cut_csfs(csf_coefficients, csfs, CI_coefficients, 0.01) 
+    #sCI.write_AMOLQC(csf_coefficients, csfs, CI_coefficients, file_name=f"all_discarded_sort.wf")  
+    #exit(1)
 
     print("Script to obtain selected configuration interaction (sCI) wave functions in Quantum Monte Carlo.")
     print("Select one from the following options by entering the respective integer:")
@@ -702,7 +729,8 @@ if __name__ == "__main__":
 
 
     if wavefunction_choice == 1:
-        sCI.get_initial_wf(S, n_MO, initial_determinant,[1,2], orbital_symmetry, total_symmetry,frozen_elecs,[],split_at=split_at,verbose = True)
+        wavefunction_name = input("enter wave function name (without .wf).\n")
+        sCI.get_initial_wf(S, n_MO, initial_determinant,[1,2], orbital_symmetry, total_symmetry,frozen_elecs,[],wavefunction_name,split_at=split_at,verbose = True)
     elif wavefunction_choice == 2:
         wavefunction_name = input("enter wave function name (without .wf).\n")
         CI_coefficient_thresh = float(input("enter CI coefficient threshold to select csfs."))
@@ -711,7 +739,7 @@ if __name__ == "__main__":
     elif wavefunction_choice == 3:
         wavefunction_name = input("enter wave function name (without .wf).\n")
         CI_coefficient_thresh = float(input("enter CI coefficient threshold to select csfs.\n"))
-        n_min = int(input("enter minimum number of csfs that shall be selected."))
+        n_min = int(input("enter minimum number of csfs that shall be selected.\n"))
         sCI.select_and_do_next_package("discarded", wavefunction_name, "residual", CI_coefficient_thresh, split_at=split_at,n_min=n_min, verbose=True)
 
 

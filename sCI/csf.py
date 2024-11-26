@@ -422,7 +422,7 @@ class SelectedCI():
                 csf_coefficients.append(coupling_coefficients[i])
         return csf_coefficients, csf_determinants
     
-    def get_initial_wf(self, S, n_MO, initial_determinant, excitations, orbital_symmetry, total_symmetry, frozen_elecs, frozen_MOs,filename,split_at=0,verbose=False):
+    def get_initial_wf(self, S, M_s, n_MO, initial_determinant, excitations, orbital_symmetry, total_symmetry, frozen_elecs, frozen_MOs,filename,split_at=0,verbose=False):
         """get initial wave function for selected Configuration Interaction in Amolqc format."""
         determinant_basis = []
         

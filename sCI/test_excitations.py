@@ -1,5 +1,5 @@
 #import pytest
-from my_csf import SelectedCI
+from csf import SelectedCI
 #from my_csf import *
 
 sCI = SelectedCI()

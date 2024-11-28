@@ -2,24 +2,125 @@
 
 import sys
 import numpy as np
+import time 
 import yaml
+import math
 from pyscript import * # requirement pyscript as python package https://github.com/Leonard-Reuter/pyscript
 from csf import SelectedCI
 
-def blockwise_optimization():
-    
-    # initial block
+def blockwise_optimization(N,S, M_s, n_MO, excitations, orbital_symmetry, point_group, frozen_electrons, frozen_MOs, wavefunction_name,blocksize,initial_ami, iteration_ami,n_min):
+    # 
+    # initial block with adding jastrow and optimizing jastrow
+    #
     n_block = 1 
-    mkdir(f"block{n_block}")
-    with cd("block{n_block}"):
+    dir_name = f"block{n_block}"
+    mkdir(dir_name)
+    
+    with cd(dir_name):
+        cp(f"../{wavefunction_name}.wf",".")
         initial_determinant = sCI.build_energy_lowest_detetminant(N)
         sCI.get_initial_wf(S, M_s, n_MO, initial_determinant, excitations, orbital_symmetry, point_group, frozen_electrons, frozen_MOs, wavefunction_name,split_at=blocksize,verbose = True)
+        # extract total number of csfs
+        rm(f"{wavefunction_name}.wf")
+        mv(f"{wavefunction_name}_out.wf",f"{wavefunction_name}.wf")
+        cp(f"../{initial_ami}.ami", ".")
+
+        # get number of csfs
+        _, csfs, _, _ = sCI.read_AMOLQC_csfs(f"{wavefunction_name}.wf",N)
+        _, csfs_dis, _, _ = sCI.read_AMOLQC_csfs(f"{wavefunction_name}_res.wf",N)
+        n_all_csfs = len(csfs) + len(csfs_dis)
+        # submit job
+        with open("amolqc_job", "w") as printfile:
+            printfile.write(f"""#!/bin/bash
+#SBATCH --partition=p16      
+#SBATCH --job-name=block1 
+#SBATCH --output=o.%j       
+#SBATCH --ntasks=144        
+#SBATCH --ntasks-per-core=1 
+
+# Befehle die ausgeführt werden sollen:
+mpiexec -np 144 $AMOLQC/build/bin/amolqc {initial_ami}.ami
+""")
+        run("sbatch amolqc_job")
+        job_done = False
+        while not job_done:
+            try:
+                with open(f"{initial_ami}.amo", "r") as reffile:
+                    for line in reffile:
+                        if "Amolqc run finished" in line:
+                            job_done = True
+                            print("Job done")
+            except:
+                FileNotFoundError
+            if not job_done:
+                print("Job not done yet.")
+                time.sleep(60)
+        # get last wavefunction 
+        wf_number = 0
+        for file_name in ls():
+            names = file_name.split(".")
+            if names[-1] == "wf" and initial_ami in names[0]:
+                temp = names[0]
+                number = int(temp.split("-")[-1])
+                if number > wf_number:
+                    wf_number = number
+                    last_wavefunction = file_name
+        print(last_wavefunction)
+        cp(last_wavefunction, f"../{dir_name}.wf")
+        cp(f"{wavefunction_name}_res.wf", f"../{dir_name}_res.wf")
+    #
+    # perform blockwise iterations
+    #
+    # number of remaining blocks 
+    n_blocks = math.ceil((n_all_csfs - blocksize)/(blocksize - n_min))
+    print(f"number of total blocks (without initial block) {n_blocks}")
     
+    last_wavefunction = dir_name
+    n_block += 1 
+    dir_name = f"block{n_block}"
+    mkdir(dir_name)
+    with cd(dir_name):
+        cp(f"../{last_wavefunction}.wf",".")
+        mv(f"../{last_wavefunction}_res.wf",".")
+        sCI.select_and_do_next_package(N,f"{last_wavefunction}_dis", f"{last_wavefunction}", f"{last_wavefunction}_res", 1.000, split_at=blocksize,n_min=20, verbose=True)
+        mv(f"{last_wavefunction}_out.wf",f"{wavefunction_name}.wf")
+        mv(f"{last_wavefunction}_dis_out.wf",f"{wavefunction_name}_dis.wf")
+        mv(f"{last_wavefunction}_res_out.wf",f"{wavefunction_name}_res.wf")
+        cp(f"../{iteration_ami}.ami", ".")
+        with open("amolqc_job", "w") as printfile:
+            printfile.write(f"""#!/bin/bash
+#SBATCH --partition=p16      
+#SBATCH --job-name={dir_name} 
+#SBATCH --output=o.%j       
+#SBATCH --ntasks=144        
+#SBATCH --ntasks-per-core=1 
+
+# Befehle die ausgeführt werden sollen:
+mpiexec -np 144 $AMOLQC/build/bin/amolqc {iteration_ami}.ami
+""")
+
+        run("sbatch amolqc_job")
+        job_done = False
+        while not job_done:
+            try:
+                with open(f"{iteration_ami}.amo", "r") as reffile:
+                    print("amo exists")
+                    for line in reffile:
+                        if "Amolqc run finished" in line:
+                            print("FOUND")
+                            job_done = True
+            except:
+                FileNotFoundError
+                print("file not found")
+            if not job_done:
+                print("Job not done")
+                time.sleep(60)
+        
+                
     #sCI.select_and_do_next_package("discarded", wavefunction_name, "residual", threshold_ci, split_at=split_at, n_min=n_min, verbose=True)
     
 
 def main():
-    sCI = SelectedCI()
 
     if len(sys.argv) == 1:
         sys.exit('''
@@ -62,8 +163,9 @@ def main():
         }, 
         'Specifications': 
             {
-                'type': '', 
-                'blocksize': 0
+                'blocksize': 0,
+                'initialAMI': "",
+                'iterationAMI': "",
             }
             }
     
@@ -91,6 +193,8 @@ def main():
     n_min = data['WavefunctionOptions']['keepMin']
 
     blocksize = data['Specifications']['blocksize']
+    initial_ami = data['Specifications']['initialAMI']
+    iteration_ami = data['Specifications']['iterationAMI']
     do_blockwise = False
 
     # call demanded routine
@@ -103,16 +207,13 @@ def main():
                                       frozen_electrons, frozen_MOs, wavefunction_name, threshold_ci, split_at=split_at, verbose=True)
         # TODO implement in csf.py the option for n_min not only by CI cofficients
     elif data['WavefunctionOptions']['wavefunctionOperation'] == 'blockwise':
-        #blockwise_optimization()
-        # initial block
-        n_block = 1 
-        mkdir(f"block{n_block}")
-        with cd(f"block{n_block}"):
-            initial_determinant = sCI.build_energy_lowest_detetminant(N)
-            sCI.get_initial_wf(S, M_s, n_MO, initial_determinant, excitations, orbital_symmetry, point_group, frozen_electrons, frozen_MOs, wavefunction_name,split_at=blocksize,verbose = True)
+        blockwise_optimization(N,S, M_s, n_MO, excitations, orbital_symmetry, point_group, frozen_electrons, frozen_MOs, wavefunction_name,blocksize, initial_ami, iteration_ami,n_min)
+
     if data['Output']['plotCICoefficients']: 
         sCI.plot_ci_coefficients(wavefunction_name,N)
         
+# program starts
+sCI = SelectedCI()
 main()
 
 

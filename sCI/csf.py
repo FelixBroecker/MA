@@ -174,11 +174,55 @@ class SelectedCI():
             for j in range(len(determinants)):
                 csf_coefficients[i][j], csfs[i][j] = self.sort_determinant(csf_coefficients[i][j], csfs[i][j])
         return csf_coefficients, csfs
+    
+    def determine_excitations(self,csfs, reference_determinant):
+        """determine the excitations in all csfs with respect to a reference determinant. Return a list of numbers that correspond to the excitation (1=single, 2=double ...)"""
+        excitation_type=[]
+        for csf in csfs:
+            difference = 0
+            for electron in csf[0]:
+                if electron not in reference_determinant:
+                    difference +=1
+            excitation.append(difference)
+        return excitation_type
+    
+    def sort_order_of_csfs(self, csf_coefficients, csfs, CI_coefficients, option, reference_determinant=[]):
+        """sort order of csfs in list of csfs. options are random or by_excitation."""
+        if option == "random":
+            indices = list(range(1,len(csf_coefficients)))
+            random.shuffle(indices)
+            indices = [0] + indices
+            # resort 
+            csf_coefficients = [csf_coefficients[i] for i in indices]
+            csfs = [csfs[i] for i in indices]
+            CI_coefficients = [CI_coefficients[i] for i in indices]
+            return csf_coefficients, csfs, CI_coefficients
+        elif option == "by_excitation":
+            assert reference_determinant, "no reference determinant was passed to sort_order_of_csfs with option by_excitation."
+            # determine excitation of each csf
+            excitation = determine_excitations(csfs,reference_determinant)
+            idx = np.array(excitation).argsort()
+            CI_coefficients = [CI_coefficients[i] for i in idx]
+            csf_coefficients = [csf_coefficients[i] for i in idx]
+            csfs = [csfs[i] for i in idx]
+            return csf_coefficients, csfs, CI_coefficients
+             
 
     def is_singulett(self, determinant):
         """check if single slaterdeterminant is a singulett spineigenfunction"""
         # Check if all values in the counter (i.e., occurrences) are exactly 2
         return all(determinant.count(x) == 2 for x in set(determinant))
+
+    def sort_csfs_by_CI_coeff(self, csf_coefficients, csfs, CI_coefficients):
+        """sort csfs by size of MO coefficients"""
+        CI_coefficients_abs = -np.abs(np.array(CI_coefficients))
+        idx = CI_coefficients_abs.argsort()
+
+        CI_coefficients = [CI_coefficients[i] for i in idx]
+        csf_coefficients = [csf_coefficients[i] for i in idx]
+        csfs = [csfs[i] for i in idx]
+        return csf_coefficients, csfs, CI_coefficients
+            
     
     def cut_csfs(self, csf_coefficients, csfs, CI_coefficients, CI_coefficient_thresh):
         """cut off csf coefficients, csfs, and CI coefficients by the size of the CI coefficients
@@ -209,13 +253,7 @@ class SelectedCI():
             list of discarded csf CI coefficients.
         """
         # sort CI coefficients from largest to smallest absolut value and respectively csfs and csf_coefficients
-        CI_coefficients_abs = -np.abs(np.array(CI_coefficients))
-        idx = CI_coefficients_abs.argsort()
-
-        CI_coefficients = [CI_coefficients[i] for i in idx]
-        csf_coefficients = [csf_coefficients[i] for i in idx]
-        csfs = [csfs[i] for i in idx]
-
+        csf_coefficients, csfs, CI_coefficients = self.sort_csfs_by_CI_coeff(csf_coefficients, csfs, CI_coefficients)
         # cut off csfs below CI coefficient threshold
         cut_CI_coefficients = []
         cut_csf_coefficients = []
@@ -462,7 +500,7 @@ class SelectedCI():
             FileNotFoundError
         if split_at>0:
             # prints csfs inlcusive the indice of split at in first wf and residual in second
-            self.write_AMOLQC(csf_coefficients[:split_at], csfs[:split_at], CI_coefficients[:split_at:],pretext=wfpretext,file_name=f"{filename}_out.wf")   
+            self.write_AMOLQC(csf_coefficients[:split_at], csfs[:split_at], CI_coefficients[:split_at],pretext=wfpretext,file_name=f"{filename}_out.wf")   
             self.write_AMOLQC(csf_coefficients[split_at:], csfs[split_at:], CI_coefficients[split_at:],file_name=f"{filename}_res.wf")   
             if verbose:
                 print(f"number of csfs in wf 1: {len(csf_coefficients[:split_at])}")

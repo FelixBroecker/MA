@@ -183,7 +183,7 @@ class SelectedCI():
             for electron in csf[0]:
                 if electron not in reference_determinant:
                     difference +=1
-            excitation.append(difference)
+            excitation_type.append(difference)
         return excitation_type
     
     def sort_order_of_csfs(self, csf_coefficients, csfs, CI_coefficients, option, reference_determinant=[]):
@@ -200,7 +200,7 @@ class SelectedCI():
         elif option == "by_excitation":
             assert reference_determinant, "no reference determinant was passed to sort_order_of_csfs with option by_excitation."
             # determine excitation of each csf
-            excitation = determine_excitations(csfs,reference_determinant)
+            excitation = self.determine_excitations(csfs,reference_determinant)
             idx = np.array(excitation).argsort()
             CI_coefficients = [CI_coefficients[i] for i in idx]
             csf_coefficients = [csf_coefficients[i] for i in idx]
@@ -467,7 +467,7 @@ class SelectedCI():
                 csf_coefficients.append(coupling_coefficients[i])
         return csf_coefficients, csf_determinants
     
-    def get_initial_wf(self, S, M_s, n_MO, initial_determinant, excitations, orbital_symmetry, total_symmetry, frozen_elecs, frozen_MOs,filename,split_at=0,verbose=False):
+    def get_initial_wf(self, S, M_s, n_MO, initial_determinant, excitations, orbital_symmetry, total_symmetry, frozen_elecs, frozen_MOs,filename,split_at=0,sort_option="",verbose=False):
         """get initial wave function for selected Configuration Interaction in Amolqc format."""
         N = len(initial_determinant)
         determinant_basis = []
@@ -488,9 +488,13 @@ class SelectedCI():
 
         # sort determinants to obtain AMOLQC format
         csf_coefficients, csfs = self.sort_determinants_in_csfs(csf_coefficients, csfs) 
-        
+
+         
         # generate MO initial list
         CI_coefficients = [1 if n == 0 else 0 for n in range(len(csfs))]
+        if sort_option != "":
+            print(sort_option)
+            csf_coefficients, csfs, CI_coefficients = self.sort_order_of_csfs(csf_coefficients, csfs, CI_coefficients, sort_option, initial_determinant)
        
         # read wave function pretext from already generated wavefunction
         wfpretext = ""
@@ -514,7 +518,7 @@ class SelectedCI():
     def select_and_do_excitations(
             self, N: int, n_MO: int, S: float, M_s: float, reference_determinant: list, excitations: list, orbital_symmetry: list, 
             total_symmetry: str, frozen_elecs: list, frozen_MOs: list, input_wf: str, 
-            CI_coefficient_thresh: float, split_at=0, use_optimized_CI_coeffs = True, verbose=False
+            CI_coefficient_thresh: float, split_at=0, use_optimized_CI_coeffs = True, keep_singles=False,verbose=False
                                 ):
         """select csfs by size of their coefficients and do n-fold excitations of determinants in selected csfs."""
         # TODO add n_min as second criterion beside the selection on threshold size
@@ -580,7 +584,7 @@ class SelectedCI():
         # write wavefunction in AMOLQC format
         if split_at>0:
             # prints csfs inlcusive the indice of split at in first wf and residual in second
-            self.write_AMOLQC(csf_coefficients[:split_at], csfs[:split_at], CI_coefficients[:split_at:],pretext=wfpretext,file_name=f"{input_wf}_out.wf")   
+            self.write_AMOLQC(csf_coefficients[:split_at], csfs[:split_at], CI_coefficients[:split_at],pretext=wfpretext,file_name=f"{input_wf}_out.wf")   
             self.write_AMOLQC(csf_coefficients[split_at:], csfs[split_at:], CI_coefficients[split_at:],file_name=f"{nput_wf}_residual.wf")   
             if verbose:
                 print(f"number of csfs in next iteration wf: {len(csf_coefficients[:split_at])}")
@@ -597,8 +601,8 @@ class SelectedCI():
 
         try:
             csf_coefficients_discarded_all, csfs_discarded_all, CI_coefficients_discarded_all, _ = self.read_AMOLQC_csfs(f"{filename_discarded_all}.wf", N)    
-            csf_coefficients_discarded_all, csfs_discarded_all, CI_coefficients_discarded_all , _, _, _ \
-        = self.cut_csfs(csf_coefficients_discarded_all, csfs_discarded_all, CI_coefficients_discarded_all, 0.0) 
+            csf_coefficients_discarded_all, csfs_discarded_all, CI_coefficients_discarded_all \
+        = self.sort_csfs_by_CI_coeff(csf_coefficients_discarded_all, csfs_discarded_all, CI_coefficients_discarded_all) 
         except:
             FileNotFoundError
             csf_coefficients_discarded_all, csfs_discarded_all, CI_coefficients_discarded_all = [],[],[]

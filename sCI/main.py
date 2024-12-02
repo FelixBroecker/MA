@@ -259,6 +259,7 @@ def main():
                 'blocksize': 0,
                 'initialAMI': "",
                 'iterationAMI': "",
+                'keepAllSingles': False,
             }
             }
 

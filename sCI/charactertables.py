@@ -15,16 +15,18 @@ class CharacterTable:
         if self.point_group == "d2h":
             self.d2h()
         if self.point_group == "c2v":
-            self.c2v()   
+            self.c2v()
         if self.point_group == "d4h":
-            self.d4h()        
-    
+            self.d4h()
+        if self.point_group == "cs":
+            self.cs()
+
     def multiply(self, characters_1, characters_2):
         """elementwise character multiplication of two irreps"""
-        assert len(characters_1) == len(characters_2), "characters are of unequal length" 
+        assert len(characters_1) == len(characters_2), "characters are of unequal length"
         res = [i * j for i, j in zip(characters_1, characters_2)]
         return res
-    
+
     def character2label(self, character):
         """translate character to mulliken label of character table"""
         for label, charac in self.characters.items():
@@ -32,7 +34,28 @@ class CharacterTable:
                 return label
         return None
 
-    
+
+    def cs(self):
+        """load character table d2h"""
+        self.operations = [
+            "1 E",
+            "1 sh",
+            ]
+        self.characters = {
+            "A'" : [1,1],
+            "A''": [1,-1]
+        }
+        self.linear_funcs = {
+            "A'" : ["x", "y", "Rz"],
+            "A''": ["z", "Rx", "Ry"],
+        }
+        self.quadratic_funcs = {
+            "A'" : ["xx","yy","zz", "xy"],
+            "A''": ["yz", "xz"],
+        }
+        self.order = 2
+
+
     def d2h(self):
         """load character table d2h"""
         self.operations = [
@@ -56,7 +79,7 @@ class CharacterTable:
             "B1g": ["Rz"],
             "B2g": ["Ry"],
             "B3g": ["Rx"],
-            "Au" : [], 
+            "Au" : [],
             "B1u": ["z"],
             "B2u": ["y"],
             "B3u": ["x"],
@@ -66,13 +89,13 @@ class CharacterTable:
             "B1g": ["xy"],
             "B2g": ["xz"],
             "B3g": ["yz"],
-            "Au" : [], 
+            "Au" : [],
             "B1u": [],
             "B2u": [],
             "B3u": [],
         }
         self.order = 8
-    
+
     def d4h(self):
         """load character table d4h"""
         self.operations = [

@@ -12,134 +12,135 @@ def blockwise_optimization(N,S, M_s, n_MO, excitations, orbital_symmetry, point_
     #
     # initial block with adding jastrow and optimizing jastrow
     #
-    n_block = 1
-    dir_name = f"block{n_block}"
-    mkdir(dir_name)
-
-    with cd(dir_name):
-        cp(f"../{wavefunction_name}.wf",".")
-        initial_determinant = sCI.build_energy_lowest_detetminant(N)
-        sCI.get_initial_wf(S, M_s, n_MO, initial_determinant, excitations, orbital_symmetry, point_group, frozen_electrons, frozen_MOs, wavefunction_name,split_at=blocksize,sort_option=sort,verbose = True)
-        # extract total number of csfs
-        rm(f"{wavefunction_name}.wf")
-        mv(f"{wavefunction_name}_out.wf",f"{wavefunction_name}.wf")
-        cp(f"../{initial_ami}.ami", ".")
-
-        # get number of csfs
-        _, csfs, _, _ = sCI.read_AMOLQC_csfs(f"{wavefunction_name}.wf",N)
-        _, csfs_dis, _, _ = sCI.read_AMOLQC_csfs(f"{wavefunction_name}_res.wf",N)
-        n_all_csfs = len(csfs) + len(csfs_dis)
-        # submit job
-        with open("amolqc_job", "w") as printfile:
-            printfile.write(f"""#!/bin/bash
-#SBATCH --partition=p16
-#SBATCH --job-name=block1
-#SBATCH --output=o.%j
-#SBATCH --ntasks=144
-#SBATCH --ntasks-per-core=1
-
-# Befehle die ausgeführt werden sollen:
-mpiexec -np 144 $AMOLQC/build/bin/amolqc {initial_ami}.ami
-""")
-        run("sbatch amolqc_job")
-        job_done = False
-        while not job_done:
-            try:
-                with open(f"{initial_ami}.amo", "r") as reffile:
-                    for line in reffile:
-                        if "Amolqc run finished" in line:
-                            job_done = True
-                            print("job done.")
-            except:
-                FileNotFoundError
-            if not job_done:
-                print("job not done yet.")
-                time.sleep(20)
-        # get last wavefunction
-        wf_number = 0
-        for file_name in ls():
-            names = file_name.split(".")
-            if names[-1] == "wf" and initial_ami in names[0]:
-                temp = names[0]
-                number = int(temp.split("-")[-1])
-                if number > wf_number:
-                    wf_number = number
-                    last_wavefunction = file_name
-        cp(last_wavefunction, f"../{dir_name}.wf")
-        cp(f"{wavefunction_name}_res.wf", f"../{dir_name}_res.wf")
-    #
-    # perform blockwise iterations
-    #
-    # number of remaining blocks
-    n_blocks = math.ceil((n_all_csfs - blocksize)/(blocksize - n_min))
-    print(f"number of total blocks (without initial block) {n_blocks}")
-    for i in range(n_blocks):
-        print()
-        print(f"Block iteration: {i+1}")
-        print()
-        last_wavefunction = dir_name
-        n_block += 1
-        dir_name = f"block{n_block}"
-        mkdir(dir_name)
-        with cd(dir_name):
-            try:
-                mv(f"../{last_wavefunction}_dis.wf",".")
-            except:
-                FileNotFoundError
-
-            cp(f"../{last_wavefunction}.wf",".")
-            mv(f"../{last_wavefunction}_res.wf",".")
-            sCI.select_and_do_next_package(N,f"{last_wavefunction}_dis", f"{last_wavefunction}", f"{last_wavefunction}_res", ci_threshold, split_at=blocksize,n_min=n_min, verbose=True)
-            mv(f"{last_wavefunction}_out.wf",f"{wavefunction_name}.wf")
-            mv(f"{last_wavefunction}_dis_out.wf",f"{wavefunction_name}_dis.wf")
-            mv(f"{last_wavefunction}_res_out.wf",f"{wavefunction_name}_res.wf")
-            cp(f"../{iteration_ami}.ami", ".")
-            with open("amolqc_job", "w") as printfile:
-                printfile.write(f"""#!/bin/bash
-#SBATCH --partition=p16
-#SBATCH --job-name={dir_name}
-#SBATCH --output=o.%j
-#SBATCH --ntasks=144
-#SBATCH --ntasks-per-core=1
-
-# Befehle die ausgeführt werden sollen:
-mpiexec -np 144 $AMOLQC/build/bin/amolqc {iteration_ami}.ami
-""")
-
-            run("sbatch amolqc_job")
-            job_done = False
-            while not job_done:
-                try:
-                    with open(f"{iteration_ami}.amo", "r") as reffile:
-                        for line in reffile:
-                            if "Amolqc run finished" in line:
-                                job_done = True
-                                print("job done.")
-                except:
-                    FileNotFoundError
-                if not job_done:
-                    print("job not done yet.")
-                    time.sleep(20)
-
-            # get last wavefunction
-            wf_number = 0
-            for file_name in ls():
-                names = file_name.split(".")
-                if names[-1] == "wf" and iteration_ami in names[0]:
-                    temp = names[0]
-                    number = int(temp.split("-")[-1])
-                    if number > wf_number:
-                        wf_number = number
-                        last_wavefunction = file_name
-            cp(last_wavefunction, f"../{dir_name}.wf")
-            cp(f"{wavefunction_name}_res.wf", f"../{dir_name}_res.wf")
-            cp(f"{wavefunction_name}_dis.wf", f"../{dir_name}_dis.wf")
+#    n_block = 1
+#    dir_name = f"block{n_block}"
+#    mkdir(dir_name)
+#
+#    with cd(dir_name):
+#        cp(f"../{wavefunction_name}.wf",".")
+#        initial_determinant = sCI.build_energy_lowest_detetminant(N)
+#        sCI.get_initial_wf(S, M_s, n_MO, initial_determinant, excitations, orbital_symmetry, point_group, frozen_electrons, frozen_MOs, wavefunction_name,split_at=blocksize,sort_option=sort,verbose = True)
+#        # extract total number of csfs
+#        rm(f"{wavefunction_name}.wf")
+#        mv(f"{wavefunction_name}_out.wf",f"{wavefunction_name}.wf")
+#        cp(f"../{initial_ami}.ami", ".")
+#
+#        # get number of csfs
+#        _, csfs, _, _ = sCI.read_AMOLQC_csfs(f"{wavefunction_name}.wf",N)
+#        _, csfs_dis, _, _ = sCI.read_AMOLQC_csfs(f"{wavefunction_name}_res.wf",N)
+#        n_all_csfs = len(csfs) + len(csfs_dis)
+#        # submit job
+#        with open("amolqc_job", "w") as printfile:
+#            printfile.write(f"""#!/bin/bash
+##SBATCH --partition=p16
+##SBATCH --job-name=block1
+##SBATCH --output=o.%j
+##SBATCH --ntasks=144
+##SBATCH --ntasks-per-core=1
+#
+## Befehle die ausgeführt werden sollen:
+#mpiexec -np 144 $AMOLQC/build/bin/amolqc {initial_ami}.ami
+#""")
+#        run("sbatch amolqc_job")
+#        job_done = False
+#        while not job_done:
+#            try:
+#                with open(f"{initial_ami}.amo", "r") as reffile:
+#                    for line in reffile:
+#                        if "Amolqc run finished" in line:
+#                            job_done = True
+#                            print("job done.")
+#            except:
+#                FileNotFoundError
+#            if not job_done:
+#                print("job not done yet.")
+#                time.sleep(20)
+#        # get last wavefunction
+#        wf_number = 0
+#        for file_name in ls():
+#            names = file_name.split(".")
+#            if names[-1] == "wf" and initial_ami in names[0]:
+#                temp = names[0]
+#                number = int(temp.split("-")[-1])
+#                if number > wf_number:
+#                    wf_number = number
+#                    last_wavefunction = file_name
+#        cp(last_wavefunction, f"../{dir_name}.wf")
+#        cp(f"{wavefunction_name}_res.wf", f"../{dir_name}_res.wf")
+#    #
+#    # perform blockwise iterations
+#    #
+#    # number of remaining blocks
+#    n_blocks = math.ceil((n_all_csfs - blocksize)/(blocksize - n_min))
+#    print(f"number of total blocks (without initial block) {n_blocks}")
+#    for i in range(n_blocks):
+#        print()
+#        print(f"Block iteration: {i+1}")
+#        print()
+#        last_wavefunction = dir_name
+#        n_block += 1
+#        dir_name = f"block{n_block}"
+#        mkdir(dir_name)
+#        with cd(dir_name):
+#            try:
+#                mv(f"../{last_wavefunction}_dis.wf",".")
+#            except:
+#                FileNotFoundError
+#
+#            cp(f"../{last_wavefunction}.wf",".")
+#            mv(f"../{last_wavefunction}_res.wf",".")
+#            sCI.select_and_do_next_package(N,f"{last_wavefunction}_dis", f"{last_wavefunction}", f"{last_wavefunction}_res", ci_threshold, split_at=blocksize,n_min=n_min, verbose=True)
+#            mv(f"{last_wavefunction}_out.wf",f"{wavefunction_name}.wf")
+#            mv(f"{last_wavefunction}_dis_out.wf",f"{wavefunction_name}_dis.wf")
+#            mv(f"{last_wavefunction}_res_out.wf",f"{wavefunction_name}_res.wf")
+#            cp(f"../{iteration_ami}.ami", ".")
+#            with open("amolqc_job", "w") as printfile:
+#                printfile.write(f"""#!/bin/bash
+##SBATCH --partition=p16
+##SBATCH --job-name={dir_name}
+##SBATCH --output=o.%j
+##SBATCH --ntasks=144
+##SBATCH --ntasks-per-core=1
+#
+## Befehle die ausgeführt werden sollen:
+#mpiexec -np 144 $AMOLQC/build/bin/amolqc {iteration_ami}.ami
+#""")
+#
+#            run("sbatch amolqc_job")
+#            job_done = False
+#            while not job_done:
+#                try:
+#                    with open(f"{iteration_ami}.amo", "r") as reffile:
+#                        for line in reffile:
+#                            if "Amolqc run finished" in line:
+#                                job_done = True
+#                                print("job done.")
+#                except:
+#                    FileNotFoundError
+#                if not job_done:
+#                    print("job not done yet.")
+#                    time.sleep(20)
+#
+#            # get last wavefunction
+#            wf_number = 0
+#            for file_name in ls():
+#                names = file_name.split(".")
+#                if names[-1] == "wf" and iteration_ami in names[0]:
+#                    temp = names[0]
+#                    number = int(temp.split("-")[-1])
+#                    if number > wf_number:
+#                        wf_number = number
+#                        last_wavefunction = file_name
+#            cp(last_wavefunction, f"../{dir_name}.wf")
+#            cp(f"{wavefunction_name}_res.wf", f"../{dir_name}_res.wf")
+#            cp(f"{wavefunction_name}_dis.wf", f"../{dir_name}_dis.wf")
     #
     # do finial selection from all CI coefficients
     #
-    last_wavefunction = dir_name
+    initial_determinant = sCI.build_energy_lowest_detetminant(N)
+    last_wavefunction = "block6"
     dir_name = f"block_final"
-    mkdir(dir_name)
+#    mkdir(dir_name)
     with cd(dir_name):
         cp(f"../{last_wavefunction}.wf",".")
         mv(f"../{last_wavefunction}_res.wf",".")
@@ -152,6 +153,7 @@ mpiexec -np 144 $AMOLQC/build/bin/amolqc {iteration_ami}.ami
         CI_coefficients += CI_coefficients_dis
         # keep all sinlge excitations
         idx=0
+        keep_all_singles = False
         if keep_all_singles:
             csf_coefficients, csfs, CI_coefficients = sCI.sort_order_of_csfs(csf_coefficients, csfs, CI_coefficients, reference_determinant=initial_determinant,option="by_excitation")
             n_excitation = sCI.determine_excitations(csfs,initial_determinant)
@@ -160,7 +162,7 @@ mpiexec -np 144 $AMOLQC/build/bin/amolqc {iteration_ami}.ami
                 if n_excitation > 1:
                     idx = i
                     break
-                    
+
         # sort csfs by CI coeffs
         csf_coefficients[idx:], csfs[idx:], CI_coefficients[idx:] = sCI.sort_csfs_by_CI_coeff(csf_coefficients[idx:], csfs[idx:], CI_coefficients[idx:])
         #
@@ -304,6 +306,11 @@ def main():
         # TODO implement in csf.py the option for n_min not only by CI cofficients
     elif data['WavefunctionOptions']['wavefunctionOperation'] == 'blockwise':
         blockwise_optimization(N,S, M_s, n_MO, excitations, orbital_symmetry, point_group, frozen_electrons, frozen_MOs, wavefunction_name,blocksize, initial_ami, iteration_ami,n_min,threshold_ci,sort=sort,keep_all_singles=keep_all_singles)
+    elif data['WavefunctionOptions']['wavefunctionOperation'] == 'cut':
+        # read wf and cut by split_at
+        csf_coefficients, csfs, CI_coefficients, wfpretext = sCI.read_AMOLQC_csfs(f"{wavefunction_name}.wf", N)
+        csf_coefficients, csfs, CI_coefficients = sCI.sort_csfs_by_CI_coeff(csf_coefficients, csfs, CI_coefficients)
+        sCI.write_AMOLQC(csf_coefficients[:split_at], csfs[:split_at], CI_coefficients[:split_at],pretext=wfpretext,file_name=f"{wavefunction_name}_out.wf")
 
     if data['Output']['plotCICoefficients']:
         sCI.plot_ci_coefficients(wavefunction_name,N)

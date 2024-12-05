@@ -333,6 +333,7 @@ class SelectedCI():
 
         # generate all required excitations on initial determinant
         excited_determinants = []
+
         def get_n_fold_excitation_recursive(occupied, virtual, n_fold_excitation, occ_mask=[], virt_mask=[]):
             """perform single excitation for all electrons in all virtual orbitals that
             are not masked"""
@@ -374,9 +375,11 @@ class SelectedCI():
                     else:
                         continue
 
-        def get_n_fold_excitation(occupied, virtual, n_fold_excitation, occ_mask=[], virt_mask=[]):
-            """perform single excitation for all electrons in all virtual orbitals that
-            are not masked"""
+        def get_n_fold_excitation(
+                occupied, virtual, n_fold_excitation, occ_mask=[], virt_mask=[]
+                ):
+            """perform single excitation for all electrons in all virtual
+            orbitals that are not masked"""
             n_elec = len(occupied)
             n_virt = len(virtual)
 
@@ -385,45 +388,70 @@ class SelectedCI():
                 occ_mask = [True for _ in range(n_elec)]
             if not virt_mask:
                 virt_mask = [True for _ in range(n_virt)]
-            virt_mask_save = virt_mask.copy()
-            occ_mask_save = occ_mask.copy()
 
-            # mimic a n-tuple sum as sum_i( sum_j>i ( sum_k>j( ... )))
-            # over electrons from occupied orbitals. n_fold_excitation
+            # sort such that beta electrons appear first and then alpha
+            idx = np.array(occupied).argsort()
+            occupied = [occupied[i] for i in idx]
+            occ_mask = [occ_mask[i] for i in idx]
+            idx = np.array(virtual).argsort()
+            virtual = [virtual[i] for i in idx]
+            virt_mask = [virt_mask[i] for i in idx]
+
             # electrons are selected for unique excitation.
-            excite_at_idx = [i for i in range(n_fold_excitation)]
+            excite_from_idx = [i for i in range(n_fold_excitation)]
             done= False
+            # mimic n_tuple sum over occupied orbitals. Then perform excita-
+            # tions as i->a, j->b, k->c ...
             while not done:
+                excite_to_idx = [i for i in range(n_fold_excitation)]
+                # mimic n_fold sum over virtual orbitals.
+                while True:
+                    occupied_tmp = occupied.copy()
+                    # do excitation.
+                    # check if i and a have the same sign (not spin forbidden)
+                    #       if occupied lower than virtual
+                    #       if electron and virtual orbital have already been changed by
+                    #           previous excitation
+                    for k in range(n_fold_excitation):
+                        is_spin_allowed = occupied[excite_from_idx[k]] * virtual[excite_to_idx[k]] > 0
+                        is_excitation = abs(occupied[excite_from_idx[k]]) < abs(virtual[excite_to_idx[k]])
+                        not_touched = all([occ_mask[excite_from_idx[k]], virt_mask[excite_to_idx[k]]])
+                        if is_spin_allowed and is_excitation and not_touched:
+                            occupied_tmp[excite_from_idx[k]] = virtual[excite_to_idx[k]]
+                        else:
+                            break
+                        if k == n_fold_excitation-1:
+                            occupied_tmp = sorted(occupied_tmp,key=self.custom_sort)
+                            excited_determinants.append(occupied_tmp.copy())
 
-                # TODO perform here after the unique excitation with electrons
-                # of occupied_tmp which correspond to indices of excite_at_idx
-                print(excite_at_idx)
-                occupied_tmp = occupied.copy()
-                virtual_tmp = virtual.copy()
+                    # stop criterion for the sum over all virtuals
+                    if excite_to_idx[0] >= n_virt - n_fold_excitation:
+                        break
+                    # obtain next list of indices for next excitation. This corres-
+                    # ponds to one loop over a n-tuple sum over all virtuals.
+                    for a in range(n_fold_excitation-1,-1,-1):
+                        if excite_to_idx[a] < n_virt-1 -  (n_fold_excitation-1-a):
+                            excite_to_idx[a] +=1
+                            for b in range(a+1,n_fold_excitation):
+                                excite_to_idx[b] = excite_to_idx[b -1] +1
+                            break
+                # end of mimicked sum over virtuals
 
-                # stop criterion
-                if excite_at_idx[0] >= n_elec - n_fold_excitation:
+                # stop criterion for the sum over all occupied
+                if excite_from_idx[0] >= n_elec - n_fold_excitation:
                     done = True
                     break
                 # obtain next list of indices for next excitation. This corres-
-                # ponds to one loop over a n-tuple sum.
+                # ponds to one loop over a n-tuple sum over all electrons.
                 for i in range(n_fold_excitation-1,-1,-1):
-                    #print(excite_at_idx[i] < n_elec- 1-(n_fold_excitation - 1 - i))
-                    #print(excite_at_idx[i] < n_elec-(n_fold_excitation - 1 - (n_fold_excitation - 1 - i)))
-                    #print(f"criterion {n_elec- 1-(n_fold_excitation - 1 - i)}")
-                    #_= input()
-                    #print()
-                    if excite_at_idx[i] < n_elec-1 -  (n_fold_excitation-1-i):
-                        excite_at_idx[i] +=1
+                    if excite_from_idx[i] < n_elec-1 -  (n_fold_excitation-1-i):
+                        excite_from_idx[i] +=1
                         for j in range(i+1,n_fold_excitation):
-                            excite_at_idx[j] = excite_at_idx[j -1] +1
+                            excite_from_idx[j] = excite_from_idx[j -1] +1
                         break
 
 
-
-
-
-        # get all demanded excited determinants recursivly
+        # get all demanded excited determinants
         for excitation in excitations:
             occ_mask_ini = occ_mask.copy()
             virt_mask_ini = virt_mask.copy()
@@ -766,7 +794,9 @@ if __name__ == "__main__":
 
     sCI = SelectedCI()
     spinfuncs = SpinCoupling()
-    sCI.get_excitations(6,[6],[1,-1,2,-2,3,-3])
+    res = sCI.get_excitations(4,[1,2,3,4],[1,-1,2,-2])
+    print(res)
+    print(len(res))
 
 
     #csf_coefficients, csfs, CI_coefficients = sCI.read_AMOLQC_csfs(f"block_final.wf", 10)

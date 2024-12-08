@@ -8,6 +8,7 @@ import math
 from pyscript import *  # requirement pyscript as python package https://github.com/Leonard-Reuter/pyscript
 from csf import SelectedCI
 from blockwise import Automation
+from evaluation import Evaluation
 
 
 def blockwise_optimization(
@@ -334,7 +335,10 @@ def main():
             "thresholdCI": 1.0,
             "keepMin": 0,
         },
-        "Output": {"plotCICoefficients": False},
+        "Output": {
+            "plotCICoefficients": False,
+            "plotly": False,
+        },
         "Specifications": {
             "blocksize": 0,
             "initialAMI": "",
@@ -398,6 +402,7 @@ def main():
         threshold_ci,
         keep_all_singles,
     )
+    evaluation = Evaluation()
     # call demanded routine
     if data["WavefunctionOptions"]["wavefunctionOperation"] == "initial":
         initial_determinant = sCI.build_energy_lowest_detetminant(N)
@@ -481,7 +486,10 @@ def main():
         )
 
     if data["Output"]["plotCICoefficients"]:
-        sCI.plot_ci_coefficients(wavefunction_name, N)
+        if data["Output"]["plotly"]:
+            evaluation.plot_ci_coefficients_plotly(wavefunction_name, N, n_MO)
+        else:
+            evaluation.plot_ci_coefficients(wavefunction_name, N)
 
 
 # program starts

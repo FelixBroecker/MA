@@ -1,5 +1,6 @@
 import time
 import math
+import numpy as np
 from pyscript import *  # requirement pyscript as python package https://github.com/Leonard-Reuter/pyscript
 from csf import SelectedCI
 
@@ -176,7 +177,33 @@ mpiexec -np {n_tasks} /home/theochem/Amolqc/build-heap/bin/amolqc {ami_name}.ami
         if self.verbose:
             print("finish initial block.")
 
-    def do_block_iteration(self, n_blocks, input_wf):
+    def parse_csf_energies(
+        self, input_amo: str, n_csfs: int, sort_by_idx=True
+    ):
+        """"""
+        energies = []
+        indices = []
+        with open(f"{input_amo}.amo", "r") as reffile:
+            found = False
+            counter = 0
+            for line in reffile:
+                if counter == n_csfs:
+                    break
+                if found:
+                    counter += 1
+                    items = line.split()
+                    indices.append(int(items[0]))
+                    energies.append(float(items[1]))
+                if "  Index  Energy difference" in line:
+                    found = True
+        if sort_by_idx:
+            idx = np.array(indices).argsort()
+            indices = [indices[i] for i in idx]
+            energies = [energies[i] for i in idx]
+
+        return indices, energies
+
+    def do_block_iteration(self, n_blocks: int, input_wf: str):
         """"""
         if self.verbose:
             print(f"number of total blocks (without initial block) {n_blocks}")
@@ -236,10 +263,8 @@ mpiexec -np {n_tasks} /home/theochem/Amolqc/build-heap/bin/amolqc {ami_name}.ami
                             print("job not done yet.")
                         time.sleep(20)
                     # get last wavefunction and copy to folder with all blocks
-                last_wavefunction = self.get_final_wavefunction(
-                    self.blockwise_ami
-                )
-                cp(f"{last_wavefunction}.wf", f"../{dir_name}.wf")
+                optimized_wf = self.get_final_wavefunction(self.blockwise_ami)
+                cp(f"{optimized_wf}.wf", f"../{dir_name}.wf")
                 cp(
                     f"{self.wavefunction_name}_res.wf",
                     f"../{dir_name}_res.wf",
@@ -248,6 +273,7 @@ mpiexec -np {n_tasks} /home/theochem/Amolqc/build-heap/bin/amolqc {ami_name}.ami
                     f"{self.wavefunction_name}_dis.wf",
                     f"../{dir_name}_dis.wf",
                 )
+                last_wavefunction = dir_name
         if self.verbose:
             print("finish blockwise optimization")
 
@@ -362,6 +388,6 @@ mpiexec -np {n_tasks} /home/theochem/Amolqc/build-heap/bin/amolqc {ami_name}.ami
         # blockwise iteration
         self.do_block_iteration(n_blocks, "block_initial")
         # final block
-        self.do_final_block("final", n_blocks)
+        self.do_final_block("final", f"block{n_blocks}")
 
         # sCI.select_and_do_next_package("discarded", wavefunction_name, "residual", threshold_ci, split_at=split_at, n_min=n_min, verbose=True)

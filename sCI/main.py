@@ -7,7 +7,7 @@ import yaml
 import math
 from pyscript import *  # requirement pyscript as python package https://github.com/Leonard-Reuter/pyscript
 from csf import SelectedCI
-from blockwise import Automation
+from automation import Automation
 from evaluation import Evaluation
 
 
@@ -373,8 +373,8 @@ def main():
     blocksize = data["Specifications"]["blocksize"]
     initial_ami = data["Specifications"]["initialAMI"]
     iteration_ami = data["Specifications"]["iterationAMI"]
+    final_ami = data["Specifications"]["finalAMI"]
     keep_all_singles = data["Specifications"]["keepAllSingles"]
-    do_blockwise = False
 
     partition = data["Hardware"]["partition"]
     n_tasks = data["Hardware"]["nTasks"]
@@ -395,9 +395,6 @@ def main():
         blocksize,
         sort,
         True,
-        initial_ami,
-        iteration_ami,
-        "final",
         n_min,
         threshold_ci,
         keep_all_singles,
@@ -444,11 +441,11 @@ def main():
         )
         # TODO implement in csf.py the option for n_min not only by CI cofficients
     elif data["WavefunctionOptions"]["wavefunctionOperation"] == "block_final":
-        auto.do_final_block("intermediate", wavefunction_name)
+        auto.do_final_block("intermediate", wavefunction_name, final_ami)
     elif data["WavefunctionOptions"]["wavefunctionOperation"] == "blockwise":
         print("do new implementation")
 
-        auto.blockwise_optimization()
+        auto.blockwise_optimization(initial_ami, iteration_ami, final_ami)
     elif data["WavefunctionOptions"]["wavefunctionOperation"] == "blockwise":
         blockwise_optimization(
             N,
@@ -484,7 +481,8 @@ def main():
             pretext=wfpretext,
             file_name=f"{wavefunction_name}_out.wf",
         )
-
+    elif data["WavefunctionOptions"]["wavefunctionOperation"] == "test":
+        indices, energies = auto.parse_csf_energies("amolqc-2", 223)
     if data["Output"]["plotCICoefficients"]:
         if data["Output"]["plotly"]:
             evaluation.plot_ci_coefficients_plotly(wavefunction_name, N, n_MO)

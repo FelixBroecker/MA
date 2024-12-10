@@ -363,9 +363,9 @@ mpiexec -np {n_tasks} /home/theochem/Amolqc/build-heap/bin/amolqc {ami_name}.ami
                 print()
                 print("finish final block.")
 
-    def do_initial_iteration(self, block_label, initial_ami):
+    def do_initial_iteration(self, block_label: str, initial_ami: str):
         """"""
-        dir_name = f"block{block_label}"
+        dir_name = f"it{block_label}"
         mkdir(dir_name)
 
         with cd(dir_name):
@@ -417,6 +417,78 @@ mpiexec -np {n_tasks} /home/theochem/Amolqc/build-heap/bin/amolqc {ami_name}.ami
         if self.verbose:
             print("finish initial block.")
 
+    def do_selective_iteration(self):
+        """"""
+        n_block = 0
+        last_wavefunction = input_wf
+        for i in range(n_blocks):
+            print()
+            print(f"Block iteration: {i+1}/{n_blocks}")
+            print()
+            n_block += 1
+            dir_name = f"block{n_block}"
+            mkdir(dir_name)
+            # get wavefunctions from previous iterations
+            with cd(dir_name):
+                try:
+                    mv(f"../{last_wavefunction}_dis.wf", ".")
+                except FileNotFoundError:
+                    pass
+                cp(f"../{last_wavefunction}.wf", ".")
+                mv(f"../{last_wavefunction}_res.wf", ".")
+                self.sCI.select_and_do_next_package(
+                    self.N,
+                    f"{last_wavefunction}_dis",
+                    f"{last_wavefunction}",
+                    f"{last_wavefunction}_res",
+                    self.ci_threshold,
+                    split_at=self.blocksize,
+                    n_min=self.n_min,
+                    verbose=self.verbose,
+                )
+                mv(
+                    f"{last_wavefunction}_out.wf",
+                    f"{self.wavefunction_name}.wf",
+                )
+                mv(
+                    f"{last_wavefunction}_dis_out.wf",
+                    f"{self.wavefunction_name}_dis.wf",
+                )
+                mv(
+                    f"{last_wavefunction}_res_out.wf",
+                    f"{self.wavefunction_name}_res.wf",
+                )
+                cp(f"../{blockwise_ami}.ami", ".")
+                # submit job
+                self.print_job_file(
+                    self.partition,
+                    dir_name,
+                    self.n_tasks,
+                    blockwise_ami,
+                )
+                run("sbatch amolqc_job")
+                job_done = False
+                while not job_done:
+                    job_done = self.check_job_done(blockwise_ami)
+                    if not job_done:
+                        if self.verbose:
+                            print("job not done yet.")
+                        time.sleep(20)
+                    # get last wavefunction and copy to folder with all blocks
+                optimized_wf = self.get_final_wavefunction(blockwise_ami)
+                cp(f"{optimized_wf}.wf", f"../{dir_name}.wf")
+                cp(
+                    f"{self.wavefunction_name}_res.wf",
+                    f"../{dir_name}_res.wf",
+                )
+                cp(
+                    f"{self.wavefunction_name}_dis.wf",
+                    f"../{dir_name}_dis.wf",
+                )
+                last_wavefunction = dir_name
+        if self.verbose:
+            print("finish blockwise optimization")
+
     def blockwise_optimization(self, initial_ami, blockwise_ami, final_ami):
         #
         # initial block with adding jastrow and optimizing jastrow
@@ -440,6 +512,8 @@ mpiexec -np {n_tasks} /home/theochem/Amolqc/build-heap/bin/amolqc {ami_name}.ami
 
         # sCI.select_and_do_next_package("discarded", wavefunction_name, "residual", threshold_ci, split_at=split_at, n_min=n_min, verbose=True)
 
-    def iterative_construction(self, initial_ami):
+    def do_iterative_construction(self, initial_ami):
         """"""
         n_block = 1
+        self.do_initial_block(n_block, initial_ami)
+        self.do_selective_iteration()

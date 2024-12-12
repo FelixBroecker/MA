@@ -12,6 +12,7 @@ from evaluation import Evaluation
 
 
 def main():
+    sCI = SelectedCI()
 
     if len(sys.argv) == 1:
         sys.exit(
@@ -46,17 +47,20 @@ def main():
             "frozenElectrons": [],
             "frozenMOs": [],
             "splitAt": 0,
-            "thresholdCI": 1.0,
-            "keepMin": 0,
         },
         "Output": {
             "plotCICoefficients": False,
             "plotly": False,
         },
         "Specifications": {
+            "criterion": "",
+            "threshold": 1.0,
+            "keepMin": 0,
             "blocksize": 0,
             "initialAMI": "",
             "iterationAMI": "",
+            "finalAMI": "",
+            "energyAMI": "",
             "keepAllSingles": False,
         },
         "Hardware": {"partition": "p16", "nTasks": "144"},
@@ -80,13 +84,15 @@ def main():
     frozen_electrons = data["WavefunctionOptions"]["frozenElectrons"]
     frozen_MOs = data["WavefunctionOptions"]["frozenMOs"]
     split_at = data["WavefunctionOptions"]["splitAt"]
-    threshold_ci = data["WavefunctionOptions"]["thresholdCI"]
-    n_min = data["WavefunctionOptions"]["keepMin"]
     sort = data["WavefunctionOptions"]["sort"]
 
+    criterion = data["Specifications"]["criterion"]
+    threshold = data["Specifications"]["threshold"]
+    n_min = data["Specifications"]["keepMin"]
     blocksize = data["Specifications"]["blocksize"]
     initial_ami = data["Specifications"]["initialAMI"]
     iteration_ami = data["Specifications"]["iterationAMI"]
+    energy_ami = data["Specifications"]["energyAMI"]
     final_ami = data["Specifications"]["finalAMI"]
     keep_all_singles = data["Specifications"]["keepAllSingles"]
 
@@ -106,11 +112,12 @@ def main():
         frozen_MOs,
         partition,
         n_tasks,
+        criterion,
         blocksize,
         sort,
         True,
         n_min,
-        threshold_ci,
+        threshold,
         keep_all_singles,
     )
     evaluation = Evaluation()
@@ -134,33 +141,16 @@ def main():
             verbose=True,
         )
 
-    elif (
-        data["WavefunctionOptions"]["wavefunctionOperation"]
-        == "do_excitations"
-    ):
-        initial_determinant = sCI.build_energy_lowest_detetminant(N)
-        sCI.select_and_do_excitations(
-            N,
-            n_MO,
-            S,
-            M_s,
-            initial_determinant,
-            excitations,
-            orbital_symmetry,
-            point_group,
-            frozen_electrons,
-            frozen_MOs,
-            wavefunction_name,
-            threshold_ci,
-            split_at=split_at,
-            verbose=True,
-        )
-
     elif data["WavefunctionOptions"]["wavefunctionOperation"] == "block_final":
         auto.do_final_block("intermediate", wavefunction_name, final_ami)
 
     elif data["WavefunctionOptions"]["wavefunctionOperation"] == "blockwise":
-        auto.blockwise_optimization(initial_ami, iteration_ami, final_ami)
+        auto.blockwise_optimization(
+            initial_ami,
+            iteration_ami,
+            final_ami,
+            energy_ami=energy_ami,
+        )
 
     elif data["WavefunctionOptions"]["wavefunctionOperation"] == "cut":
         # read wf and cut by split_at
@@ -179,10 +169,15 @@ def main():
         )
 
     elif data["WavefunctionOptions"]["wavefunctionOperation"] == "iterative":
-        auto.do_iterative_construction(initial_ami)
+        initial_determinant = sCI.build_energy_lowest_detetminant(N)
+        auto.do_iterative_construction(
+            initial_ami, iteration_ami, initial_determinant
+        )
 
     elif data["WavefunctionOptions"]["wavefunctionOperation"] == "test":
         indices, energies = auto.parse_csf_energies("amolqc-2", 223)
+        print(indices)
+        print(energies)
 
     if data["Output"]["plotCICoefficients"]:
         if data["Output"]["plotly"]:
@@ -192,6 +187,6 @@ def main():
 
 
 # program starts
-sCI = SelectedCI()
+
 
 main()

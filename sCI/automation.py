@@ -20,11 +20,12 @@ class Automation:
         frozen_MOs,
         partition,
         n_tasks,
+        criterion: str,
         blocksize,
         sort_option,
         verbose,
         n_min,
-        ci_threshold,
+        threshold,
         keep_all_singles,
     ):
         self.sCI = SelectedCI()
@@ -43,8 +44,9 @@ class Automation:
         self.verbose = verbose
         self.partition = partition
         self.n_tasks = n_tasks
+        self.criterion = criterion
         self.n_min = n_min
-        self.ci_threshold = ci_threshold
+        self.threshold = threshold
         self.keep_all_singles = keep_all_singles
         self.n_all_csfs = 0
 
@@ -55,6 +57,7 @@ class Automation:
         n_tasks,
         ami_name,
         jobfile_name="amolqc_job",
+        path="/home/broecker/bin/Amolqc/build/bin/amolqc",
     ):
         with open(f"{jobfile_name}", "w") as printfile:
             printfile.write(
@@ -65,7 +68,7 @@ class Automation:
 #SBATCH --ntasks={n_tasks}
 #SBATCH --ntasks-per-core=1
 # Befehle die ausgeführt werden sollen:
-mpiexec -np {n_tasks} /home/theochem/Amolqc/build-heap/bin/amolqc {ami_name}.ami
+mpiexec -np {n_tasks} {path} {ami_name}.ami
 """
             )
 
@@ -117,7 +120,11 @@ mpiexec -np {n_tasks} /home/theochem/Amolqc/build-heap/bin/amolqc {ami_name}.ami
             print(f"{input_wf}_dis.wf not found.")
         return n_csfs
 
-    def do_initial_block(self, block_label, initial_ami: str):
+    def do_initial_block(
+        self,
+        block_label,
+        initial_ami: str,
+    ):
         dir_name = f"block{block_label}"
         mkdir(dir_name)
 
@@ -168,6 +175,7 @@ mpiexec -np {n_tasks} /home/theochem/Amolqc/build-heap/bin/amolqc {ami_name}.ami
             last_wavefunction = self.get_final_wavefunction(initial_ami)
             cp(f"{last_wavefunction}.wf", f"../{dir_name}.wf")
             cp(f"{self.wavefunction_name}_res.wf", f"../{dir_name}_res.wf")
+
         if self.verbose:
             print("finish initial block.")
 
@@ -198,7 +206,7 @@ mpiexec -np {n_tasks} /home/theochem/Amolqc/build-heap/bin/amolqc {ami_name}.ami
         return indices, energies
 
     def do_block_iteration(
-        self, n_blocks: int, input_wf: str, blockwise_ami: str
+        self, n_blocks: int, input_wf: str, blockwise_ami: str, energy_ami=""
     ):
         """"""
         if self.verbose:
@@ -212,6 +220,7 @@ mpiexec -np {n_tasks} /home/theochem/Amolqc/build-heap/bin/amolqc {ami_name}.ami
             n_block += 1
             dir_name = f"block{n_block}"
             mkdir(dir_name)
+
             # get wavefunctions from previous iterations
             with cd(dir_name):
                 try:
@@ -220,12 +229,50 @@ mpiexec -np {n_tasks} /home/theochem/Amolqc/build-heap/bin/amolqc {ami_name}.ami
                     pass
                 cp(f"../{last_wavefunction}.wf", ".")
                 mv(f"../{last_wavefunction}_res.wf", ".")
+
+                # compute energy criterion if required
+                if self.criterion == "energy":
+                    mv(
+                        f"{last_wavefunction}.wf",
+                        f"{self.wavefunction_name}.wf",
+                    )
+                    _, csfs, _, _ = self.sCI.read_AMOLQC_csfs(
+                        f"{self.wavefunction_name}.wf", self.N
+                    )
+                    n_csfs = len(csfs)
+                    cp(f"../{energy_ami}.ami", ".")
+                    self.print_job_file(
+                        self.partition,
+                        f"e_{dir_name}",
+                        self.n_tasks,
+                        energy_ami,
+                    )
+                    run("sbatch amolqc_job")
+                    # check if job done
+                    job_done = False
+                    while not job_done:
+                        job_done = self.check_job_done(energy_ami)
+                        if not job_done:
+                            if self.verbose:
+                                print("job not done yet.")
+                            time.sleep(20)
+                    mv(
+                        f"{self.wavefunction_name}.wf",
+                        f"{last_wavefunction}.wf",
+                    )
+                    indices, energies = self.parse_csf_energies(
+                        energy_ami, n_csfs - 1
+                    )
+                    print(indices, energies)
+
+                # get next block
                 self.sCI.select_and_do_next_package(
                     self.N,
                     f"{last_wavefunction}_dis",
                     f"{last_wavefunction}",
                     f"{last_wavefunction}_res",
-                    self.ci_threshold,
+                    self.threshold,
+                    self.criterion,
                     split_at=self.blocksize,
                     n_min=self.n_min,
                     verbose=self.verbose,
@@ -309,7 +356,7 @@ mpiexec -np {n_tasks} /home/theochem/Amolqc/build-heap/bin/amolqc {ami_name}.ami
                     )
                 )
                 n_excitation = self.sCI.determine_excitations(
-                    csfs, initial_determinant
+                    csfs, initial_determinant, "csf"
                 )
                 idx = 0
                 for i, n_excitation in enumerate(n_excitation):
@@ -417,34 +464,49 @@ mpiexec -np {n_tasks} /home/theochem/Amolqc/build-heap/bin/amolqc {ami_name}.ami
         if self.verbose:
             print("finish initial block.")
 
-    def do_selective_iteration(self):
+    def do_selective_iteration(
+        self,
+        n_blocks: int,
+        input_wf: str,
+        iteration_ami: str,
+        reference_determinant: list,
+        excitations: list,
+        excitations_on_ini: list,
+    ):
         """"""
+        if self.verbose:
+            print(f"number of selections {n_blocks}")
         n_block = 0
         last_wavefunction = input_wf
+        excitations_on = excitations_on_ini
         for i in range(n_blocks):
             print()
             print(f"Block iteration: {i+1}/{n_blocks}")
             print()
             n_block += 1
-            dir_name = f"block{n_block}"
+            dir_name = f"it{n_block}"
+            dir_name = f"it5"
             mkdir(dir_name)
+            ## hard coded
+            # number corresponds to n-tuple excitation
+            threshold = 0.0007
             # get wavefunctions from previous iterations
             with cd(dir_name):
-                try:
-                    mv(f"../{last_wavefunction}_dis.wf", ".")
-                except FileNotFoundError:
-                    pass
                 cp(f"../{last_wavefunction}.wf", ".")
-                mv(f"../{last_wavefunction}_res.wf", ".")
-                self.sCI.select_and_do_next_package(
+                self.sCI.select_and_do_excitations(
                     self.N,
-                    f"{last_wavefunction}_dis",
-                    f"{last_wavefunction}",
-                    f"{last_wavefunction}_res",
-                    self.ci_threshold,
-                    split_at=self.blocksize,
-                    n_min=self.n_min,
-                    verbose=self.verbose,
+                    self.n_MO,
+                    self.S,
+                    self.M_s,
+                    reference_determinant,
+                    excitations,
+                    excitations_on,
+                    self.orbital_symmetry,
+                    self.point_group,
+                    self.frozen_electrons,
+                    self.frozen_MOs,
+                    last_wavefunction,
+                    threshold,
                 )
                 mv(
                     f"{last_wavefunction}_out.wf",
@@ -454,66 +516,64 @@ mpiexec -np {n_tasks} /home/theochem/Amolqc/build-heap/bin/amolqc {ami_name}.ami
                     f"{last_wavefunction}_dis_out.wf",
                     f"{self.wavefunction_name}_dis.wf",
                 )
-                mv(
-                    f"{last_wavefunction}_res_out.wf",
-                    f"{self.wavefunction_name}_res.wf",
-                )
-                cp(f"../{blockwise_ami}.ami", ".")
+                cp(f"../{iteration_ami}.ami", ".")
                 # submit job
                 self.print_job_file(
                     self.partition,
                     dir_name,
                     self.n_tasks,
-                    blockwise_ami,
+                    iteration_ami,
                 )
                 run("sbatch amolqc_job")
                 job_done = False
                 while not job_done:
-                    job_done = self.check_job_done(blockwise_ami)
+                    job_done = self.check_job_done(iteration_ami)
                     if not job_done:
                         if self.verbose:
                             print("job not done yet.")
                         time.sleep(20)
                     # get last wavefunction and copy to folder with all blocks
-                optimized_wf = self.get_final_wavefunction(blockwise_ami)
+                optimized_wf = self.get_final_wavefunction(iteration_ami)
                 cp(f"{optimized_wf}.wf", f"../{dir_name}.wf")
-                cp(
-                    f"{self.wavefunction_name}_res.wf",
-                    f"../{dir_name}_res.wf",
-                )
                 cp(
                     f"{self.wavefunction_name}_dis.wf",
                     f"../{dir_name}_dis.wf",
                 )
                 last_wavefunction = dir_name
+                excitations_on = [i + 1 for i in excitations_on]
         if self.verbose:
             print("finish blockwise optimization")
 
-    def blockwise_optimization(self, initial_ami, blockwise_ami, final_ami):
+    def blockwise_optimization(
+        self, initial_ami, blockwise_ami, final_ami, energy_ami=""
+    ):
         #
         # initial block with adding jastrow and optimizing jastrow
         #
-        n_block = "_initial"
-        self.do_initial_block(n_block, initial_ami)
-        #
+        # n_block = "_initial"
+        # self.do_initial_block(n_block, initial_ami)
         # perform blockwise iterations
         #
-        # TODO get n_blocks from somewhere. fill here n_csfs
-        # get number of csfs
 
-        self.n_all_csfs = self.get_n_all_csfs("block_initial")
-        n_blocks = math.ceil(
-            (self.n_all_csfs - self.blocksize) / (self.blocksize - self.n_min)
-        )
+        # self.n_all_csfs = self.get_n_all_csfs("block_initial")
+        # n_blocks = math.ceil(
+        #    (self.n_all_csfs - self.blocksize) / (self.blocksize - self.n_min)
+        # )
+        n_blocks = math.ceil(174 / (self.blocksize - self.n_min))
         # blockwise iteration
-        self.do_block_iteration(n_blocks, "block_initial", blockwise_ami)
+        self.do_block_iteration(
+            n_blocks, "block_initial", blockwise_ami, energy_ami=energy_ami
+        )
         # final block
         self.do_final_block("final", f"block{n_blocks}", final_ami)
 
         # sCI.select_and_do_next_package("discarded", wavefunction_name, "residual", threshold_ci, split_at=split_at, n_min=n_min, verbose=True)
 
-    def do_iterative_construction(self, initial_ami):
+    def do_iterative_construction(
+        self, initial_ami, iteration_ami, reference_determinant
+    ):
         """"""
-        n_block = 1
-        self.do_initial_block(n_block, initial_ami)
-        self.do_selective_iteration()
+        # self.do_initial_block("_ini", initial_ami)
+        self.do_selective_iteration(
+            1, "it4", iteration_ami, reference_determinant, [1], [5]
+        )

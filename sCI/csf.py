@@ -195,15 +195,25 @@ class SelectedCI:
                 )
         return csf_coefficients, csfs
 
-    def determine_excitations(self, csfs, reference_determinant):
+    def determine_excitations(
+        self, wavefunction, reference_determinant, wf_type
+    ):
         """determine the excitations in all csfs with respect to a reference determinant. Return a list of numbers that correspond to the excitation (1=single, 2=double ...)"""
         excitation_type = []
-        for csf in csfs:
-            difference = 0
-            for electron in csf[0]:
-                if electron not in reference_determinant:
-                    difference += 1
-            excitation_type.append(difference)
+        if wf_type == "csf":
+            for csf in wavefunction:
+                difference = 0
+                for electron in csf[0]:
+                    if electron not in reference_determinant:
+                        difference += 1
+                excitation_type.append(difference)
+        elif wf_type == "det":
+            for det in wavefunction:
+                difference = 0
+                for electron in det:
+                    if electron not in reference_determinant:
+                        difference += 1
+                excitation_type.append(difference)
         return excitation_type
 
     def sort_order_of_csfs(
@@ -230,7 +240,7 @@ class SelectedCI:
             ), "no reference determinant was passed to sort_order_of_csfs with option by_excitation."
             # determine excitation of each csf
             excitation = self.determine_excitations(
-                csfs, reference_determinant
+                csfs, reference_determinant, "csf"
             )
             idx = np.array(excitation).argsort()
             CI_coefficients = [CI_coefficients[i] for i in idx]
@@ -759,6 +769,7 @@ class SelectedCI:
         M_s: float,
         reference_determinant: list,
         excitations: list,
+        excitations_on: list,
         orbital_symmetry: list,
         total_symmetry: str,
         frozen_elecs: list,
@@ -767,7 +778,6 @@ class SelectedCI:
         CI_coefficient_thresh: float,
         split_at=0,
         use_optimized_CI_coeffs=True,
-        keep_singles=False,
         verbose=False,
     ):
         """select csfs by size of their coefficients and do n-fold excitations of determinants in selected csfs."""
@@ -791,10 +801,10 @@ class SelectedCI:
         )
         # write file with selected csfs
         self.write_AMOLQC(
-            csf_coefficients_selected,
-            csfs_selected,
-            CI_coefficients_selected,
-            file_name=f"{input_wf}_selected.wf",
+            csf_coefficients_discarded,
+            csfs_discarded,
+            CI_coefficients_discarded,
+            file_name=f"{input_wf}_dis_out.wf",
         )
 
         # # expand cut csfs in determinants
@@ -811,11 +821,26 @@ class SelectedCI:
         determinants_already_visited = (
             determinant_basis_selected + determinant_basis_discarded
         )
+        # determine excitation with respect to reference determinant
+        n_tuple_excitation = self.determine_excitations(
+            determinant_basis_selected, reference_determinant, "det"
+        )
+        # sort by excitation and determine section on which excitations shall
+        # be performed
+        # idx = np.array(n_tuple_excitation).argsort()
+        # determinant_basis_selected = [
+        #    determinant_basis_selected[i] for i in idx
+        # ]
+        excitation_input = []
+        for i, exc in enumerate(n_tuple_excitation):
+            if exc in excitations_on:
+                excitation_input.append(determinant_basis_selected[i])
 
-        # do exitations from selected determinants. only excite electrons that have not yet been excited
-        # in respect to the reference determinant (initial input determinant)
+        # do exitations from selected determinants. only excite electrons that
+        # have not yet been excited in respect to the reference determinant
+        # (initial input determinant)
         excited_determinants = []
-        for det in determinant_basis_selected:
+        for det in excitation_input:
             determinants = self.get_excitations(
                 n_MO,
                 excitations,
@@ -841,8 +866,6 @@ class SelectedCI:
             # Convert sublist to tuple
             det = sorted(det, key=self.custom_sort)
             det_tuple = tuple(det)
-            # if 1 in det and 2 in det and 4 in det and 5 in det and 8 in det and -1 in det and -2 in det and -4 in det and -5 in det and -8 in det:
-            #    print(det)
             if det_tuple not in seen:
                 res.append(det)
                 seen.add(det_tuple)
@@ -888,7 +911,7 @@ class SelectedCI:
                 csf_coefficients[split_at:],
                 csfs[split_at:],
                 CI_coefficients[split_at:],
-                file_name=f"{nput_wf}_residual.wf",
+                file_name=f"{input_wf}_res_out.wf",
             )
             if verbose:
                 print(
@@ -915,13 +938,13 @@ class SelectedCI:
         filename_optimized,
         filename_residual,
         CI_coefficient_thresh,
+        criterion: str,
         split_at=0,
         n_min=0,
         verbose=False,
     ):
         """select csfs by size of their coefficients and add next package of already generated csfs."""
         # read in all three csf files with already discarded csfs, not-yet-selected csfs and not-yet-optimized csfs
-        no_file_for_discarded = False
 
         try:
             (

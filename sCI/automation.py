@@ -550,16 +550,15 @@ mpiexec -np {n_tasks} {path} {ami_name}.ami
         #
         # initial block with adding jastrow and optimizing jastrow
         #
-        # n_block = "_initial"
-        # self.do_initial_block(n_block, initial_ami)
+        n_block = "_initial"
+        self.do_initial_block(n_block, initial_ami)
         # perform blockwise iterations
         #
-
-        # self.n_all_csfs = self.get_n_all_csfs("block_initial")
-        # n_blocks = math.ceil(
-        #    (self.n_all_csfs - self.blocksize) / (self.blocksize - self.n_min)
-        # )
-        n_blocks = math.ceil(174 / (self.blocksize - self.n_min))
+        self.n_all_csfs = self.get_n_all_csfs("block_initial")
+        n_blocks = math.ceil(
+            (self.n_all_csfs - self.blocksize) / (self.blocksize - self.n_min)
+        )
+        # n_blocks = math.ceil(174 / (self.blocksize - self.n_min))
         # blockwise iteration
         self.do_block_iteration(
             n_blocks, "block_initial", blockwise_ami, energy_ami=energy_ami

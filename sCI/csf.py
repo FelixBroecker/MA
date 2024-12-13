@@ -26,25 +26,43 @@ class SelectedCI:
         file_name="sCI/csfs.out",
         write_file=True,
         verbose=False,
+        wftype="csf",
     ):
         """determinant representation in csfs needs to be sorted for
         alpha spins first and then beta spins"""
-        out = "$csfs\n"
-        out += f"{int(len(csfs)): >7}\n"
-        for i, csf in enumerate(csfs):
-            out += f"{CI_coefficients[i]: >10.7f}       {len(csf)}\n"
-            for j, determinant in enumerate(csf):
-                out += f" {csf_coefficients[i][j]: 9.7f}"
+        if wftype == "csf":
+            out = "$csfs\n"
+            out += f"{int(len(csfs)): >7}\n"
+            for i, csf in enumerate(csfs):
+                out += f"{CI_coefficients[i]: >10.7f}       {len(csf)}\n"
+                for j, determinant in enumerate(csf):
+                    out += f" {csf_coefficients[i][j]: 9.7f}"
+                    for electron in determinant:
+                        out += f"  {abs(electron)}"
+                    out += "\n"
+            out += "$end"
+            out = pretext + out
+            if verbose:
+                print(out)
+            if write_file:
+                with open(file_name, "w") as printfile:
+                    printfile.write(out)
+
+        elif wftype == "det":
+            out = "$det\n"
+            out += f"{int(len(csfs)): >7}\n"
+            for i, determinant in enumerate(csfs):
+                out += f"{CI_coefficients[i]: >10.7f}"
                 for electron in determinant:
                     out += f"  {abs(electron)}"
                 out += "\n"
-        out += "$end"
-        out = pretext + out
-        if verbose:
-            print(out)
-        if write_file:
-            with open(file_name, "w") as printfile:
-                printfile.write(out)
+            out += "$end"
+            out = pretext + out
+            if verbose:
+                print(out)
+            if write_file:
+                with open(file_name, "w") as printfile:
+                    printfile.write(out)
 
     def read_AMOLQC_csfs(self, filename, n_elec, wftype="csf"):
         """read in csfs of AMOLQC format with CI coefficients"""
@@ -581,16 +599,19 @@ class SelectedCI:
         res = excited_determinants
         return res
 
-    def get_unique_csfs(self, determinant_basis, S, M_s):
+    def get_unique_csfs(
+        self, determinant_basis, S, M_s, sort_determinants=True
+    ):
         """clean determinant basis to obtain unique determinants to construct same csf only once"""
         csf_determinants = []
         csf_coefficients = []
         N = len(determinant_basis[0])
         # TODO sort determinants in determinant basis
-        for i in range(len(determinant_basis)):
-            determinant_basis[i] = sorted(
-                determinant_basis[i], key=self.custom_sort
-            )
+        if sort_determinants:
+            for i in range(len(determinant_basis)):
+                determinant_basis[i] = sorted(
+                    determinant_basis[i], key=self.custom_sort
+                )
         # remove spin information and consider only occupation
         for i, det in enumerate(determinant_basis):
             for j, orbital in enumerate(det):

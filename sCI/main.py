@@ -9,6 +9,7 @@ from pyscript import *  # requirement pyscript as python package https://github.
 from csf import SelectedCI
 from automation import Automation
 from evaluation import Evaluation
+from utils import Utils
 
 
 def main():
@@ -121,6 +122,7 @@ def main():
         keep_all_singles,
     )
     evaluation = Evaluation()
+    utils = Utils()
     # call demanded routine
 
     if data["WavefunctionOptions"]["wavefunctionOperation"] == "initial":
@@ -178,6 +180,48 @@ def main():
         indices, energies = auto.parse_csf_energies("amolqc-2", 223)
         print(indices)
         print(energies)
+
+    elif data["WavefunctionOptions"]["wavefunctionOperation"] == "read_cipsi":
+        wf_name_praefix = wavefunction_name.split(".")[0]
+        # parse determinants and print them in AMOLQC format
+        ci_coefficients, determinants = utils.parse_cipsi_dets(
+            wavefunction_name
+        )
+        sCI.write_AMOLQC(
+            [],
+            determinants[:split_at],
+            ci_coefficients[:split_at],
+            pretext="",
+            file_name=f"{wf_name_praefix}_dets.wf",
+            wftype="det",
+        )
+        print(len(determinants))
+
+        # get csfs from determinant basis and print wavefunction.
+        # create guess for CI coefficients
+        csf_coefficients, csfs = sCI.get_unique_csfs(
+            determinants, S, M_s, sort_determinants=False
+        )
+        csf_coefficients, csfs = sCI.sort_determinants_in_csfs(
+            csf_coefficients, csfs
+        )
+        ci_csf_coefficients = [1 if n == 0 else 0 for n in range(len(csfs))]
+
+        sCI.write_AMOLQC(
+            csf_coefficients[:split_at],
+            csfs[:split_at],
+            ci_csf_coefficients[:split_at],
+            pretext="",
+            file_name=f"{wf_name_praefix}_csfs.wf",
+        )
+        print(f"len csfs: {len(csfs)}")
+
+        # expand again in determinants to see how may
+        # determinants have been added
+        _, _, determinant_basis_csfs = sCI.get_transformation_matrix(
+            csf_coefficients, csfs, range(len(csf_coefficients))
+        )
+        print(len(determinant_basis_csfs))
 
     if data["Output"]["plotCICoefficients"]:
         if data["Output"]["plotly"]:

@@ -36,14 +36,10 @@ class Utils:
                     amplitude.append(float(line.split()[-1]))
                 if found and counter == 2:
                     determinant.append(line.replace("\n", "").split("|"))
-        print(n_mo)
-        print(f"indices: {len(index)}")
-        print(f"amplitude: {len(amplitude)}")
-        print(f"determinant: {len(determinant)}")
 
         # get deterinant format
         determinant = self.parse_qp_dets(determinant, n_mo)
-        print(determinant[1])
+        return amplitude, determinant
 
     def parse_qp_dets(self, determinants, n_mo):
         """ """

@@ -16,11 +16,28 @@ class Utils:
         in quantum package2 output.
         """
         n_mo = 0
+        index = []
+        determinant = []
+        amplitude = []
+        counter = 0
+        found = False
         with open(filename, "r") as reffile:
             for line in reffile:
+                counter += 1
                 if "mo_num" in line:
                     n_mo = int(line.split()[-1])
+                if "i =" in line:
+                    index.append(int(line.split()[-1]))
+                    found = True
+                    counter = 0
+                if "amplitude" in line:
+                    amplitude.append(float(line.split()[-1]))
+                if found and counter == 2:
+                    determinant.append(line.replace("\n", "").split("|"))
         print(n_mo)
+        print(f"indices: {len(index)}")
+        print(f"amplitude: {len(amplitude)}")
+        print(f"determinant: {len(determinant)}")
 
     def parse_qp_dets(self):
         """ """

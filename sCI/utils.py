@@ -8,7 +8,9 @@ class Utils:
 
     def bin2det(self, bin, sgn=1):
         """"""
-        return [sgn * i for i, bit in enumerate(reversed(bin)) if bit == "1"]
+        return [
+            sgn * (i + 1) for i, bit in enumerate(reversed(bin)) if bit == "1"
+        ]
 
     def parse_cipsi_dets(self, filename: str):
         """
@@ -39,20 +41,21 @@ class Utils:
         print(f"amplitude: {len(amplitude)}")
         print(f"determinant: {len(determinant)}")
 
-    def parse_qp_dets(self):
+        # get deterinant format
+        determinant = self.parse_qp_dets(determinant, n_mo)
+        print(determinant[1])
+
+    def parse_qp_dets(self, determinants, n_mo):
         """ """
-        hex_string = "000000000000040F"
-        bin = self.hex2bin(hex_string, 31)
+        res = []
+        for pair in determinants:
+            bin = self.hex2bin(pair[0], n_mo)
+            alpha = self.bin2det(bin, sgn=1)
 
-        # Output the result
-        print(f"Hexadecimal: {hex_string}")
-        print(f"Binary: {bin}")
-
-        indices = self.bin2det(bin, sgn=-1)
-
-        # Output the result
-        print(f"Binary: {bin}")
-        print(f"Indices of set bits (1-based): {indices}")
+            bin = self.hex2bin(pair[1], n_mo)
+            beta = self.bin2det(bin, sgn=-1)
+            res.append(alpha + beta)
+        return res
 
 
 if __name__ == "__main__":

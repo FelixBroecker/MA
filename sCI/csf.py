@@ -297,15 +297,46 @@ class SelectedCI:
         # Check if all values in the counter (i.e., occurrences) are exactly 2
         return all(determinant.count(x) == 2 for x in set(determinant))
 
-    def sort_csfs_by_CI_coeff(self, csf_coefficients, csfs, CI_coefficients):
-        """sort csfs by size of MO coefficients"""
-        CI_coefficients_abs = -np.abs(np.array(CI_coefficients))
-        idx = CI_coefficients_abs.argsort()
+    def sort_lists_by_list(
+        self, list_of_lists: list, ref_list: list, side=1, abs=False
+    ) -> list:
+        """Sort all lists in list_of_lists with respect
+        to size of values in ref_list.
 
-        CI_coefficients = [CI_coefficients[i] for i in idx]
-        csf_coefficients = [csf_coefficients[i] for i in idx]
-        csfs = [csfs[i] for i in idx]
-        return csf_coefficients, csfs, CI_coefficients
+        Parameters
+        ----------
+        list_of_lists: list of lists
+            list of lists that shall be sorted with respect to ref_list.
+        ref_list: list
+            list that is sorted in ascending or descending order and is
+            reference sort for list of lists.
+        side: int
+            sorts in ascending (1) or descending (-1) order.
+        abs: bool
+            ref list is sorted by abs of its values. The alues themselves are
+            not changed.
+        """
+        # fast return
+        if not list_of_lists:
+            return list_of_lists
+
+        assert (
+            side == 1 or side == -1
+        ), "input variable 'side' needs to be +1 or -1."
+
+        if abs:
+            sort_list = side * np.abs(np.array(ref_list))
+        else:
+            sort_list = side * np.array(ref_list)
+
+        indices = sort_list.argsort()
+
+        for idx, l in enumerate(list_of_lists):
+            if not l:
+                continue
+            list_of_lists[idx] = [list_of_lists[idx][i] for i in indices]
+
+        return list_of_lists
 
     def cut_csfs(
         self, csf_coefficients, csfs, CI_coefficients, CI_coefficient_thresh
@@ -993,7 +1024,9 @@ class SelectedCI:
         verbose=False,
     ):
         """select csfs by size of their coefficients and add next package of already generated csfs."""
-        # read in all three csf files with already discarded csfs, not-yet-selected csfs and not-yet-optimized csfs
+
+        # read in all three csf files with already discarded csfs,
+        # not-yet-selected csfs and not-yet-optimized csfs
         try:
             (
                 csf_coefficients_discarded_all,
@@ -1001,15 +1034,6 @@ class SelectedCI:
                 CI_coefficients_discarded_all,
                 _,
             ) = self.read_AMOLQC_csfs(f"{filename_discarded_all}.wf", N)
-            (
-                csf_coefficients_discarded_all,
-                csfs_discarded_all,
-                CI_coefficients_discarded_all,
-            ) = self.sort_csfs_by_CI_coeff(
-                csf_coefficients_discarded_all,
-                csfs_discarded_all,
-                CI_coefficients_discarded_all,
-            )
         except FileNotFoundError:
             (
                 csf_coefficients_discarded_all,
@@ -1017,7 +1041,8 @@ class SelectedCI:
                 CI_coefficients_discarded_all,
             ) = ([], [], [])
             print(
-                f"no file {filename_discarded_all}.wf . Thus it is going to be generated for this selection."
+                f"no file {filename_discarded_all}.wf . \
+                  Thus it is going to be generated for this selection."
             )
         (
             csf_coefficients_optimized,
@@ -1041,7 +1066,18 @@ class SelectedCI:
             print(
                 f"no file {filename_residual}.wf . Thus it is going to ignored."
             )
-        #
+        # TODO Start from here also with energy criterion
+        # sort discarded coefficients
+        (
+            csf_coefficients_discarded_all,
+            csfs_discarded_all,
+            CI_coefficients_discarded_all,
+        ) = self.sort_csfs_by_CI_coeff(
+            csf_coefficients_discarded_all,
+            csfs_discarded_all,
+            CI_coefficients_discarded_all,
+        )
+        # cut wavefunction
         (
             csf_coefficients_selected,
             csfs_selected,

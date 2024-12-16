@@ -1046,7 +1046,7 @@ class SelectedCI:
 
             if criterion == "energy":
                 _, energies_discarded_all = self.parse_csf_energies(
-                    f"{filename_optimized}_dis.nrg",
+                    f"{filename_optimized}_dis",
                     len(csfs_discarded_all),
                     sort_by_idx=True,
                 )
@@ -1059,7 +1059,7 @@ class SelectedCI:
 
             print(
                 f"no file {filename_discarded_all}.wf . \
-                  Thus it is going to be generated for this selection."
+Thus it is going to be generated for this selection."
             )
 
         # read optimized wavefunction and energies
@@ -1074,7 +1074,7 @@ class SelectedCI:
         energies_optimized = []
         if criterion == "energy":
             _, energies_optimized = self.parse_csf_energies(
-                f"{filename_optimized}.nrg",
+                f"{filename_optimized}",
                 len(csfs_discarded_all),
                 sort_by_idx=True,
             )

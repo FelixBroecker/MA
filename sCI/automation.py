@@ -231,13 +231,13 @@ mpiexec -np {n_tasks} {path} {ami_name}.ami
                                 print("job not done yet.")
                             time.sleep(20)
                     mv(
+                        f"{energy_ami}.amo",
+                        f"{last_wavefunction}.amo",
+                    )
+                    mv(
                         f"{self.wavefunction_name}.wf",
                         f"{last_wavefunction}.wf",
                     )
-                    indices, energies = self.sCI.parse_csf_energies(
-                        energy_ami, n_csfs - 1
-                    )
-                    print(indices, energies)
 
                 # get next block
                 self.sCI.select_and_do_next_package(

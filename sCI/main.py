@@ -160,7 +160,7 @@ def main():
             sCI.read_AMOLQC_csfs(f"{wavefunction_name}.wf", N)
         )
         csf_coefficients, csfs, CI_coefficients = sCI.sort_lists_by_list(
-            [csf_coefficients, csfs, CI_coefficients, test],
+            [csf_coefficients, csfs, CI_coefficients],
             CI_coefficients,
             side=-1,
             abs=True,

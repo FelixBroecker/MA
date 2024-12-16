@@ -369,8 +369,11 @@ class SelectedCI:
             list of discarded csf CI coefficients.
         """
         # sort CI coefficients from largest to smallest absolut value and respectively csfs and csf_coefficients
-        csf_coefficients, csfs, CI_coefficients = self.sort_csfs_by_CI_coeff(
-            csf_coefficients, csfs, CI_coefficients
+        csf_coefficients, csfs, CI_coefficients = self.sort_lists_by_list(
+            [csf_coefficients, csfs, CI_coefficients],
+            CI_coefficients,
+            side=-1,
+            abs=True,
         )
         # cut off csfs below CI coefficient threshold
         cut_CI_coefficients = []
@@ -1072,10 +1075,15 @@ class SelectedCI:
             csf_coefficients_discarded_all,
             csfs_discarded_all,
             CI_coefficients_discarded_all,
-        ) = self.sort_csfs_by_CI_coeff(
-            csf_coefficients_discarded_all,
-            csfs_discarded_all,
+        ) = self.sort_lists_by_list(
+            [
+                csf_coefficients_discarded_all,
+                csfs_discarded_all,
+                CI_coefficients_discarded_all,
+            ],
             CI_coefficients_discarded_all,
+            side=-1,
+            abs=True,
         )
         # cut wavefunction
         (
@@ -1098,10 +1106,15 @@ class SelectedCI:
                 csf_coefficients_selected,
                 csfs_selected,
                 CI_coefficients_selected,
-            ) = self.sort_csfs_by_CI_coeff(
-                csf_coefficients_optimized,
-                csfs_optimized,
+            ) = self.sort_lists_by_list(
+                [
+                    csf_coefficients_optimized,
+                    csfs_optimized,
+                    CI_coefficients_optimized,
+                ],
                 CI_coefficients_optimized,
+                side=-1,
+                abs=True,
             )
             (
                 csf_coefficients_discarded,

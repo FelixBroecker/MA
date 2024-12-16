@@ -340,8 +340,15 @@ mpiexec -np {n_tasks} {path} {ami_name}.ami
 
             # sort csfs by CI coeffs
             csf_coefficients[idx:], csfs[idx:], CI_coefficients[idx:] = (
-                self.sCI.sort_csfs_by_CI_coeff(
-                    csf_coefficients[idx:], csfs[idx:], CI_coefficients[idx:]
+                self.sCI.sort_lists_by_list(
+                    [
+                        csf_coefficients[idx:],
+                        csfs[idx:],
+                        CI_coefficients[idx:],
+                    ],
+                    CI_coefficients,
+                    side=-1,
+                    abs=True,
                 )
             )
             #

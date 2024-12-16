@@ -40,7 +40,7 @@ class Evaluation:
                 if electron not in ref_state:
                     difference += 1
             if difference == 1:
-                color.append("darkred")
+                color.append("red")
             elif difference == 2:
                 color.append("grey")
             elif difference == 3:
@@ -97,7 +97,7 @@ class Evaluation:
                 if electron not in ref_state:
                     difference += 1
             if difference == 1:
-                color.append("darkred")
+                color.append("red")
             elif difference == 2:
                 color.append("grey")
             elif difference == 3:

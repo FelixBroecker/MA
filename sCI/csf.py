@@ -49,7 +49,7 @@ class SelectedCI:
                     printfile.write(out)
 
         elif wftype == "det":
-            out = "$det\n"
+            out = "$dets\n"
             out += f"{int(len(csfs)): >7}\n"
             for i, determinant in enumerate(csfs):
                 out += f"{CI_coefficients[i]: >10.7f}"
@@ -600,17 +600,16 @@ class SelectedCI:
         return res
 
     def get_unique_csfs(
-        self, determinant_basis, S, M_s, sort_determinants=True
+        self, determinant_basis, S, M_s,
     ):
         """clean determinant basis to obtain unique determinants to construct same csf only once"""
         csf_determinants = []
         csf_coefficients = []
         N = len(determinant_basis[0])
         # TODO sort determinants in determinant basis
-        if sort_determinants:
-            for i in range(len(determinant_basis)):
-                determinant_basis[i] = sorted(
-                    determinant_basis[i], key=self.custom_sort
+        for i in range(len(determinant_basis)):
+            determinant_basis[i] = sorted(
+                determinant_basis[i], key=self.custom_sort
                 )
         # remove spin information and consider only occupation
         for i, det in enumerate(determinant_basis):

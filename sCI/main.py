@@ -181,6 +181,44 @@ def main():
         print(indices)
         print(energies)
 
+    elif data["WavefunctionOptions"]["wavefunctionOperation"] == "add_singles":
+         
+        initial_determinant = sCI.build_energy_lowest_detetminant(N)
+        excited_determinants = sCI.get_excitations(
+            n_MO,
+            [1],
+            initial_determinant,
+            orbital_symmetry=orbital_symmetry,
+            tot_sym=point_group,
+            core=frozen_electrons,
+            frozen_MOs=frozen_MOs,
+        )
+        # sort determinants
+        temp = []
+        for det in excited_determinants:
+            _, det_tmp = sCI.sort_determinant(1,det)
+            temp.append(det_tmp)
+        excited_determinants = temp.copy()
+        csf_coefficients, csfs, CI_coefficients, wfpretext = sCI.read_AMOLQC_csfs(f"{wavefunction_name}.wf", N)
+        _, _, det_basis = sCI.get_transformation_matrix(csf_coefficients, csfs, CI_coefficients)  
+        temp = []
+        for det in det_basis:
+            _, det_tmp = sCI.sort_determinant(1,det)
+            temp.append(det_tmp)
+        det_basis = temp.copy()
+        all_determinants = det_basis + excited_determinants
+        all_determinants = sCI.spinfuncs.remove_duplicates(all_determinants)    
+        CI_coefficients = [1 if n == 0 else 0 for n in range(len(all_determinants))]
+        
+        sCI.write_AMOLQC(
+            [],
+            all_determinants,
+            CI_coefficients,
+            pretext=wfpretext,
+            file_name=f"{wavefunction_name}_keep_sgls.wf",
+            wftype="det",
+        )
+        
     elif data["WavefunctionOptions"]["wavefunctionOperation"] == "read_cipsi":
         wf_name_praefix = wavefunction_name.split(".")[0]
         # parse determinants and print them in AMOLQC format
@@ -200,7 +238,7 @@ def main():
         # get csfs from determinant basis and print wavefunction.
         # create guess for CI coefficients
         csf_coefficients, csfs = sCI.get_unique_csfs(
-            determinants, S, M_s, sort_determinants=False
+            determinants[:1990], S, M_s 
         )
         csf_coefficients, csfs = sCI.sort_determinants_in_csfs(
             csf_coefficients, csfs

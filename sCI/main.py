@@ -163,12 +163,11 @@ def main():
             [csf_coefficients, csfs, CI_coefficients],
             CI_coefficients,
             side=-1,
-            abs=True,
+            absol=True,
         )
         print(csf_coefficients)
         print(csfs)
         print(CI_coefficients)
-        print(test)
         sCI.write_AMOLQC(
             csf_coefficients[:split_at],
             csfs[:split_at],
@@ -184,9 +183,12 @@ def main():
         )
 
     elif data["WavefunctionOptions"]["wavefunctionOperation"] == "test":
-        indices, energies = auto.parse_csf_energies("amolqc-2", 223)
-        print(indices)
-        print(energies)
+        # indices, energies = auto.parse_csf_energies("amolqc-2", 223)
+        # print(indices)
+        # print(energies)
+        auto.do_block_iteration(
+            5, "block_initial", iteration_ami, energy_ami=energy_ami
+        )
 
     elif data["WavefunctionOptions"]["wavefunctionOperation"] == "add_singles":
 

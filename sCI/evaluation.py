@@ -52,6 +52,7 @@ class Evaluation:
             elif difference == 6:
                 color.append("lime")
             else:
+
                 color.append("fuchsia")
 
         plt.xlabel("determinant idx [ ]", labelpad=15)

@@ -298,7 +298,7 @@ class SelectedCI:
         return all(determinant.count(x) == 2 for x in set(determinant))
 
     def sort_lists_by_list(
-        self, list_of_lists: list, ref_list: list, side=1, abs=False
+        self, list_of_lists: list, ref_list: list, side=1, absol=False
     ) -> list:
         """Sort all lists in list_of_lists with respect
         to size of values in ref_list.
@@ -312,7 +312,7 @@ class SelectedCI:
             reference sort for list of lists.
         side: int
             sorts in ascending (1) or descending (-1) order.
-        abs: bool
+        absol: bool
             ref list is sorted by abs of its values. The alues themselves are
             not changed.
         """
@@ -324,7 +324,7 @@ class SelectedCI:
             side == 1 or side == -1
         ), "input variable 'side' needs to be +1 or -1."
 
-        if abs:
+        if absol:
             sort_list = side * np.abs(np.array(ref_list))
         else:
             sort_list = side * np.array(ref_list)
@@ -335,73 +335,66 @@ class SelectedCI:
             if not l:
                 continue
             list_of_lists[idx] = [list_of_lists[idx][i] for i in indices]
-
         return list_of_lists
 
-    def cut_csfs(
-        self, csf_coefficients, csfs, CI_coefficients, CI_coefficient_thresh
-    ):
-        """cut off csf coefficients, csfs, and CI coefficients by the size of the CI coefficients
+    def cut_lists(self, list_of_lists, ref_list, thresh, side=1, absol=False):
+        """cut off csf coefficients, csfs, and CI coefficients by the
+        size of the CI coefficients.
         Parameters
         ----------
-        csf_coefficients : list
-            list of csf coefficients.
-        csfs : list
-            list of determinants that builds csf with coefficient from coefficient list.
-        CI_coefficients : list
-            list of csf CI coefficients.
-        CI_coefficient_thresh: float
-            cut-off value below which the csfs are discarded.
+        list_of_lists : list of lists
+            list of lists that shall be cut off with respect to ref_list.
+        ref_list : list
+            list of determinants that builds csf with coefficient
+            from coefficient list.
+        thresh: float
+            cut-off value below which the lists are cut.
+        side: int
+            sorts in ascending (1) or descending (-1) order.
+        abs: bool
+            ref list is sorted by abs of its values. The alues themselves are
+            not changed.
 
         Returns
         -------
-        csf_coefficients : list
-            list of csf coefficients.
-        csfs : list
-            list of determinants that builds csf with coefficient from coefficient list.
-        CI_coefficients : list
-            list of csf CI coefficients.
-        cut_csf_coefficients : list
-            list of discarded csf coefficients.
-        cut_csfs : list
-            list of discarded determinants that build csf with coefficient from coefficient list.
-        cut_CI_coefficients : list
-            list of discarded csf CI coefficients.
+        first_parts : list of lists
+            list that contains all first parts of cut input list.
+        second_parts : list of lists
+            list that contains all second parts of cut input list.
         """
-        # sort CI coefficients from largest to smallest absolut value and respectively csfs and csf_coefficients
-        csf_coefficients, csfs, CI_coefficients = self.sort_lists_by_list(
-            [csf_coefficients, csfs, CI_coefficients],
-            CI_coefficients,
-            side=-1,
-            abs=True,
+        # sort CI coefficients from largest to smallest absolut value and
+        # respectively csfs and csf_coefficients
+        sorted_list_of_lists = self.sort_lists_by_list(
+            list_of_lists,
+            ref_list,
+            side=side,
+            absol=absol,
         )
+        sorted_ref_list = self.sort_lists_by_list(
+            [ref_list],
+            ref_list,
+            side=side,
+            absol=absol,
+        )
+        sorted_ref_list = sorted_ref_list[0]
         # cut off csfs below CI coefficient threshold
-        cut_CI_coefficients = []
-        cut_csf_coefficients = []
-        cut_csfs = []
         cut_off = False
-        for i, coeff in enumerate(CI_coefficients):
-            if abs(coeff) < CI_coefficient_thresh:
+        for i, coeff in enumerate(sorted_ref_list):
+            if abs(coeff) < thresh:
                 cut_off = True
                 i_cut = i
                 break
 
+        first_parts = []
+        second_parts = []
         if cut_off:
-            cut_CI_coefficients += CI_coefficients[i_cut:]
-            cut_csf_coefficients += csf_coefficients[i_cut:]
-            cut_csfs += csfs[i_cut:]
-
-            CI_coefficients = CI_coefficients[:i_cut]
-            csf_coefficients = csf_coefficients[:i_cut]
-            csfs = csfs[:i_cut]
-        return (
-            csf_coefficients,
-            csfs,
-            CI_coefficients,
-            cut_csf_coefficients,
-            cut_csfs,
-            cut_CI_coefficients,
-        )
+            for lst in sorted_list_of_lists:
+                first_parts.append(lst[:i_cut:])
+                second_parts.append(lst[i_cut:])
+        else:
+            first_parts = sorted_list_of_lists
+            second_parts = [[] for _ in len(first_parts)]
+        return first_parts, second_parts
 
     def build_energy_lowest_detetminant(self, n_elecs):
         # create HF determinant, if no initial determinant is passed
@@ -452,9 +445,11 @@ class SelectedCI:
         occ_mask = [True for _ in range(n_elec)]
         virt_mask = [True for _ in range(n_virt)]
 
-        # do excitations from electrons that correspond to not excited electrons in reference determinant
+        # do excitations from electrons that correspond to not excited
+        # electrons in reference determinant
         if det_reference:
-            # assert bool(det_reference), "reference_excitation is True but no reference state has been passed"
+            # assert bool(det_reference), "reference_excitation is True
+            # but no reference state has been passed"
             virtuals_reference = [
                 i
                 for i in range(-n_orbitals, n_orbitals + 1)
@@ -467,7 +462,8 @@ class SelectedCI:
                 if a not in virtuals_reference:
                     virt_mask[idx] = False
 
-        # if core electrons are passed, no excitations shall be performed with these electrons
+        # if core electrons are passed, no excitations shall be
+        # performed with these electrons
         if core:
             for idx, i in enumerate(det_ini):
                 if i in core:
@@ -483,8 +479,8 @@ class SelectedCI:
         def get_n_fold_excitation_recursive(
             occupied, virtual, n_fold_excitation, occ_mask=[], virt_mask=[]
         ):
-            """perform single excitation for all electrons in all virtual orbitals that
-            are not masked"""
+            """perform single excitation for all electrons in
+            all virtual orbitals that are not masked"""
             n_elec = len(occupied)
             n_virt = len(virtual)
 
@@ -569,8 +565,8 @@ class SelectedCI:
                     # do excitation.
                     # check if i and a have the same sign (not spin forbidden)
                     #       if occupied lower than virtual
-                    #       if electron and virtual orbital have already been changed by
-                    #           previous excitation
+                    #       if electron and virtual orbital have already been
+                    #           changed by previous excitation
                     for k in range(n_fold_excitation):
                         is_spin_allowed = (
                             occupied[excite_from_idx[k]]
@@ -601,8 +597,9 @@ class SelectedCI:
                     # stop criterion for the sum over all virtuals
                     if excite_to_idx[0] >= n_virt - n_fold_excitation:
                         break
-                    # obtain next list of indices for next excitation. This corres-
-                    # pondsexcitatio to one loop over a n-tuple sum over all virtuals.
+                    # obtain next list of indices for next excitation. This
+                    # corresponds excitation to one loop over a n-tuple sum
+                    # over all virtuals.
                     for a in range(n_fold_excitation - 1, -1, -1):
                         if excite_to_idx[a] < n_virt - 1 - (
                             n_fold_excitation - 1 - a
@@ -639,7 +636,8 @@ class SelectedCI:
                 occ_mask=occ_mask_ini,
                 virt_mask=virt_mask_ini,
             )
-            # get_n_fold_excitation_recursive(det_ini, virtuals, excitation, occ_mask=occ_mask_ini, virt_mask=virt_mask_ini)
+            # get_n_fold_excitation_recursive(det_ini, virtuals,
+            # excitation, occ_mask=occ_mask_ini, virt_mask=virt_mask_ini)
         # remove duplicates
         excited_determinants = self.spinfuncs.remove_duplicates(
             excited_determinants
@@ -665,7 +663,8 @@ class SelectedCI:
         S,
         M_s,
     ):
-        """clean determinant basis to obtain unique determinants to construct same csf only once"""
+        """clean determinant basis to obtain unique determinants to
+        construct same csf only once"""
         csf_determinants = []
         csf_coefficients = []
         N = len(determinant_basis[0])
@@ -879,7 +878,7 @@ class SelectedCI:
             csf_coefficients_discarded,
             csfs_discarded,
             CI_coefficients_discarded,
-        ) = self.cut_csfs(
+        ) = self.cut_lists(
             csf_coefficients, csfs, CI_coefficients, CI_coefficient_thresh
         )
         # write file with selected csfs
@@ -1027,9 +1026,16 @@ class SelectedCI:
         verbose=False,
     ):
         """select csfs by size of their coefficients and add next package of already generated csfs."""
-
+        assert (
+            criterion == "energy" or criterion == "ci_coefficient"
+        ), "Criterion has to be energy or ci_coefficient."
         # read in all three csf files with already discarded csfs,
         # not-yet-selected csfs and not-yet-optimized csfs
+
+        # read discarded CSFs  and energies.
+
+        # TODO shift try and except in read_AMOLQC function.
+        energies_discarded_all = []
         try:
             (
                 csf_coefficients_discarded_all,
@@ -1037,22 +1043,44 @@ class SelectedCI:
                 CI_coefficients_discarded_all,
                 _,
             ) = self.read_AMOLQC_csfs(f"{filename_discarded_all}.wf", N)
+
+            if criterion == "energy":
+                _, energies_discarded_all = self.parse_csf_energies(
+                    f"{filename_optimized}_dis.nrg",
+                    len(csfs_discarded_all),
+                    sort_by_idx=True,
+                )
         except FileNotFoundError:
             (
                 csf_coefficients_discarded_all,
                 csfs_discarded_all,
                 CI_coefficients_discarded_all,
             ) = ([], [], [])
+
             print(
                 f"no file {filename_discarded_all}.wf . \
                   Thus it is going to be generated for this selection."
             )
+
+        # read optimized wavefunction and energies
+
         (
             csf_coefficients_optimized,
             csfs_optimized,
             CI_coefficients_optimized,
             wfpretext,
         ) = self.read_AMOLQC_csfs(f"{filename_optimized}.wf", N)
+
+        energies_optimized = []
+        if criterion == "energy":
+            _, energies_optimized = self.parse_csf_energies(
+                f"{filename_optimized}.nrg",
+                len(csfs_discarded_all),
+                sort_by_idx=True,
+            )
+
+        # read residual CSFs and energies.
+        energies_residual = []
         try:
             (
                 csf_coefficients_residual,
@@ -1060,79 +1088,122 @@ class SelectedCI:
                 CI_coefficients_residual,
                 _,
             ) = self.read_AMOLQC_csfs(f"{filename_residual}.wf", N)
+
+            if criterion == "energy":
+                _, energies_residual = self.parse_csf_energies(
+                    f"{filename_optimized}_res.nrg",
+                    len(csfs_residual),
+                    sort_by_idx=True,
+                )
         except FileNotFoundError:
             (
                 csf_coefficients_residual,
                 csfs_residual,
                 CI_coefficients_residual,
             ) = ([], [], [])
+
             print(
-                f"no file {filename_residual}.wf . Thus it is going to ignored."
+                f"no file {filename_residual}.wf. Thus it is going to ignored."
             )
-        # TODO Start from here also with energy criterion
-        # sort discarded coefficients
+
+        # TODO start from here also with energy criterion
+        # sort discarded coefficients by ci_coefficient or energy
+        ref_list_discarded_all = []
+        ref_list_optimized = []
+        absol = False
+        if criterion == "energy":
+            ref_list_optimized = energies_optimized.copy()
+            ref_list_discarded_all = energies_discarded_all.copy()
+            absol = False
+        elif criterion == "ci_coefficient":
+            ref_list_discarded_all = CI_coefficients_discarded_all.copy()
+            ref_list_optimized = CI_coefficients_optimized.copy()
+            absol = True
+
+        # cut wavefunction by criterion
         (
             csf_coefficients_discarded_all,
             csfs_discarded_all,
             CI_coefficients_discarded_all,
+            energies_discarded_all,
         ) = self.sort_lists_by_list(
             [
                 csf_coefficients_discarded_all,
                 csfs_discarded_all,
                 CI_coefficients_discarded_all,
+                energies_discarded_all,
             ],
-            CI_coefficients_discarded_all,
+            ref_list_discarded_all,
             side=-1,
-            abs=True,
+            absol=absol,
         )
         # cut wavefunction
+        tmp_first, tmp_scnd = self.cut_lists(
+            [
+                csf_coefficients_optimized,
+                csfs_optimized,
+                CI_coefficients_optimized,
+                energies_optimized,
+            ],
+            ref_list_optimized,
+            CI_coefficient_thresh,
+            side=-1,
+            absol=absol,
+        )
         (
             csf_coefficients_selected,
             csfs_selected,
             CI_coefficients_selected,
+            energies_selected,
+        ) = tmp_first
+        (
             csf_coefficients_discarded,
             csfs_discarded,
             CI_coefficients_discarded,
-        ) = self.cut_csfs(
-            csf_coefficients_optimized,
-            csfs_optimized,
-            CI_coefficients_optimized,
-            CI_coefficient_thresh,
-        )
-
+            energies_discarded,
+        ) = tmp_scnd
+        print(CI_coefficients_selected)
+        print()
+        print(CI_coefficients_discarded)
         # take n_min number of csfs by largest CI coefficients
         if len(csfs_selected) < n_min:
             (
                 csf_coefficients_selected,
                 csfs_selected,
                 CI_coefficients_selected,
+                energies_selected,
             ) = self.sort_lists_by_list(
                 [
                     csf_coefficients_optimized,
                     csfs_optimized,
                     CI_coefficients_optimized,
+                    energies_selected,
                 ],
                 CI_coefficients_optimized,
                 side=-1,
-                abs=True,
+                absol=absol,
             )
             (
                 csf_coefficients_discarded,
                 csfs_discarded,
                 CI_coefficients_discarded,
+                energies_discarded,
             ) = (
                 csf_coefficients_selected[n_min:],
                 csfs_selected[n_min:],
                 CI_coefficients_selected[n_min:],
+                energies_selected[n_min:],
             )
             (
                 csf_coefficients_selected,
                 csfs_selected,
                 CI_coefficients_selected,
+                energies_selected,
             ) = (
                 csf_coefficients_selected[:n_min],
                 csfs_selected[:n_min],
                 CI_coefficients_selected[:n_min],
+                energies_selected[:n_min],
             )
         print(f"number of selected csfs {len(csfs_selected)}")
         # full wavefunction without already discarded csfs

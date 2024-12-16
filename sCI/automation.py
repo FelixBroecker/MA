@@ -179,32 +179,6 @@ mpiexec -np {n_tasks} {path} {ami_name}.ami
         if self.verbose:
             print("finish initial block.")
 
-    def parse_csf_energies(
-        self, input_amo: str, n_csfs: int, sort_by_idx=True
-    ):
-        """"""
-        energies = []
-        indices = []
-        with open(f"{input_amo}.amo", "r") as reffile:
-            found = False
-            counter = 0
-            for line in reffile:
-                if counter == n_csfs:
-                    break
-                if found:
-                    counter += 1
-                    items = line.split()
-                    indices.append(int(items[0]))
-                    energies.append(float(items[1]))
-                if "  Index  Energy difference" in line:
-                    found = True
-        if sort_by_idx:
-            idx = np.array(indices).argsort()
-            indices = [indices[i] for i in idx]
-            energies = [energies[i] for i in idx]
-
-        return indices, energies
-
     def do_block_iteration(
         self, n_blocks: int, input_wf: str, blockwise_ami: str, energy_ami=""
     ):
@@ -260,7 +234,7 @@ mpiexec -np {n_tasks} {path} {ami_name}.ami
                         f"{self.wavefunction_name}.wf",
                         f"{last_wavefunction}.wf",
                     )
-                    indices, energies = self.parse_csf_energies(
+                    indices, energies = self.sCI.parse_csf_energies(
                         energy_ami, n_csfs - 1
                     )
                     print(indices, energies)

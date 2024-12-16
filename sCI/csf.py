@@ -119,6 +119,32 @@ class SelectedCI:
                                     break
         return csf_coefficients, csfs, CI_coefficients, pretext
 
+    def parse_csf_energies(
+        self, input_amo: str, n_csfs: int, sort_by_idx=True
+    ):
+        """"""
+        energies = []
+        indices = []
+        with open(f"{input_amo}.amo", "r") as reffile:
+            found = False
+            counter = 0
+            for line in reffile:
+                if counter == n_csfs:
+                    break
+                if found:
+                    counter += 1
+                    items = line.split()
+                    indices.append(int(items[0]))
+                    energies.append(float(items[1]))
+                if "  Index  Energy difference" in line:
+                    found = True
+        if sort_by_idx:
+            idx = np.array(indices).argsort()
+            indices = [indices[i] for i in idx]
+            energies = [energies[i] for i in idx]
+
+        return indices, energies
+
     def get_transformation_matrix(
         self, csf_coefficients: list, csfs: list, CI_coefficients: list
     ):
@@ -600,7 +626,10 @@ class SelectedCI:
         return res
 
     def get_unique_csfs(
-        self, determinant_basis, S, M_s,
+        self,
+        determinant_basis,
+        S,
+        M_s,
     ):
         """clean determinant basis to obtain unique determinants to construct same csf only once"""
         csf_determinants = []
@@ -610,7 +639,7 @@ class SelectedCI:
         for i in range(len(determinant_basis)):
             determinant_basis[i] = sorted(
                 determinant_basis[i], key=self.custom_sort
-                )
+            )
         # remove spin information and consider only occupation
         for i, det in enumerate(determinant_basis):
             for j, orbital in enumerate(det):
@@ -965,7 +994,6 @@ class SelectedCI:
     ):
         """select csfs by size of their coefficients and add next package of already generated csfs."""
         # read in all three csf files with already discarded csfs, not-yet-selected csfs and not-yet-optimized csfs
-
         try:
             (
                 csf_coefficients_discarded_all,

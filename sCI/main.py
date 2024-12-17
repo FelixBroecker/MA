@@ -184,9 +184,12 @@ def main():
         )
 
     elif data["WavefunctionOptions"]["wavefunctionOperation"] == "test":
-        # indices, energies = auto.parse_csf_energies("amolqc-2", 223)
+        # indices, energies = sCI.parse_csf_energies(
+        #    "block1/block_initial_dis_out.wf", 30, verbose=True
+        # )
         # print(indices)
         # print(energies)
+        # exit()
         auto.do_block_iteration(
             5, "block_initial", iteration_ami, energy_ami=energy_ami
         )

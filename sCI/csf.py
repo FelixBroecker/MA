@@ -23,6 +23,7 @@ class SelectedCI:
         csfs,
         CI_coefficients,
         pretext="",
+        energies=[],
         file_name="sCI/csfs.out",
         write_file=True,
         verbose=False,
@@ -42,11 +43,6 @@ class SelectedCI:
                     out += "\n"
             out += "$end"
             out = pretext + out
-            if verbose:
-                print(out)
-            if write_file:
-                with open(file_name, "w") as printfile:
-                    printfile.write(out)
 
         elif wftype == "det":
             out = "$dets\n"
@@ -58,11 +54,20 @@ class SelectedCI:
                 out += "\n"
             out += "$end"
             out = pretext + out
-            if verbose:
-                print(out)
-            if write_file:
-                with open(file_name, "w") as printfile:
-                    printfile.write(out)
+
+        if energies:
+            out += "\n"
+            out += "$nrgs\n"
+            for i, energy in enumerate(energies):
+                out += f"{i+1}\t"
+                out += f"{energy}\n"
+            out += "$end"
+
+        if verbose:
+            print(out)
+        if write_file:
+            with open(file_name, "w") as printfile:
+                printfile.write(out)
 
     def read_AMOLQC_csfs(self, filename, n_elec, wftype="csf", verbose=False):
         """read in csfs of AMOLQC format with CI coefficients"""
@@ -135,11 +140,11 @@ to read AMOLQC wavefunction."
         sort_by_idx=True,
         verbose=False,
     ):
-        """"""
+        """able to read from amo or from wf file"""
         energies = []
         indices = []
         try:
-            with open(f"{input_amo}.amo", "r") as reffile:
+            with open(f"{input_amo}", "r") as reffile:
                 found = False
                 counter = 0
                 for line in reffile:
@@ -151,6 +156,8 @@ to read AMOLQC wavefunction."
                         indices.append(int(items[0]))
                         energies.append(float(items[1]))
                     if "  Index  Energy difference" in line:
+                        found = True
+                    if "$nrgs" in line:
                         found = True
             if sort_by_idx:
                 idx = np.array(indices).argsort()
@@ -399,7 +406,11 @@ to parse CSF energy contributions."
         # cut off csfs below CI coefficient threshold
         cut_off = False
         for i, coeff in enumerate(sorted_ref_list):
-            if abs(coeff) < thresh:
+            if absol:
+                lower = abs(coeff) < thresh
+            else:
+                lower = coeff < thresh
+            if lower:
                 cut_off = True
                 i_cut = i
                 break
@@ -1038,7 +1049,7 @@ to parse CSF energy contributions."
         filename_discarded_all,
         filename_optimized,
         filename_residual,
-        CI_coefficient_thresh,
+        threshold,
         criterion: str,
         split_at=0,
         n_min=0,
@@ -1074,7 +1085,7 @@ is going to be generated for this selection."
         energies_discarded_all = []
         if criterion == "energy":
             _, energies_discarded_all = self.parse_csf_energies(
-                f"{filename_optimized}_dis",
+                f"{filename_optimized}_dis.wf",
                 len(csfs_discarded_all),
                 sort_by_idx=True,
                 verbose=True,
@@ -1099,7 +1110,7 @@ is going to be generated for this selection."
         energies_optimized = []
         if criterion == "energy":
             _, energies_optimized = self.parse_csf_energies(
-                f"{filename_optimized}",
+                f"{filename_optimized}.amo",
                 len(csfs_optimized),
                 sort_by_idx=True,
                 verbose=True,
@@ -1124,7 +1135,7 @@ is going to be generated for this selection."
         energies_residual = []
         if criterion == "energy":
             _, energies_residual = self.parse_csf_energies(
-                f"{filename_optimized}_res",
+                f"{filename_optimized}_res.wf",
                 len(csfs_residual),
                 sort_by_idx=True,
                 verbose=True,
@@ -1137,7 +1148,6 @@ is going to be generated for this selection."
                 )
                 print()
 
-        # TODO start from here also with energy criterion
         # sort discarded coefficients by ci_coefficient or energy
         ref_list_discarded_all = []
         ref_list_optimized = []
@@ -1154,8 +1164,6 @@ is going to be generated for this selection."
             ref_list_discarded_all = CI_coefficients_discarded_all.copy()
             ref_list_optimized = CI_coefficients_optimized.copy()
             absol = True
-        print(len(ref_list_optimized))
-        print(len(csfs_optimized))
         # cut wavefunction by criterion
         (
             csf_coefficients_discarded_all,
@@ -1182,7 +1190,7 @@ is going to be generated for this selection."
                 energies_optimized,
             ],
             ref_list_optimized,
-            CI_coefficient_thresh,
+            threshold,
             side=-1,
             absol=absol,
         )
@@ -1198,10 +1206,17 @@ is going to be generated for this selection."
             CI_coefficients_discarded,
             energies_discarded,
         ) = tmp_scnd
+        print(energies_selected)
+        print()
         print(CI_coefficients_selected)
         print()
+        print(csfs_selected)
+        print()
+        print(energies_discarded)
+        print()
         print(CI_coefficients_discarded)
-        exit()
+        print()
+        print(csfs_discarded)
         # take n_min number of csfs by largest CI coefficients
         if len(csfs_selected) < n_min:
             (
@@ -1214,9 +1229,9 @@ is going to be generated for this selection."
                     csf_coefficients_optimized,
                     csfs_optimized,
                     CI_coefficients_optimized,
-                    energies_selected,
+                    energies_optimized,
                 ],
-                CI_coefficients_optimized,
+                ref_list_optimized,
                 side=-1,
                 absol=absol,
             )
@@ -1243,6 +1258,7 @@ is going to be generated for this selection."
                 energies_selected[:n_min],
             )
         print(f"number of selected csfs {len(csfs_selected)}")
+
         # full wavefunction without already discarded csfs
         csf_coefficients = (
             csf_coefficients_selected + csf_coefficients_residual
@@ -1253,10 +1269,11 @@ is going to be generated for this selection."
             csf_coefficients, csfs
         )
 
-        # all discarded csfs
+        # all discarded
         csf_coefficients_discarded_all += csf_coefficients_discarded
         csfs_discarded_all += csfs_discarded
         CI_coefficients_discarded_all += CI_coefficients_discarded
+        energies_discarded_all += energies_discarded
 
         # print wavefunctions
         if split_at > 0:
@@ -1264,7 +1281,7 @@ is going to be generated for this selection."
             self.write_AMOLQC(
                 csf_coefficients[:split_at],
                 csfs[:split_at],
-                CI_coefficients[:split_at:],
+                CI_coefficients[:split_at],
                 pretext=wfpretext,
                 file_name=f"{filename_optimized}_out.wf",
             )
@@ -1272,6 +1289,7 @@ is going to be generated for this selection."
                 csf_coefficients[split_at:],
                 csfs[split_at:],
                 CI_coefficients[split_at:],
+                energies=energies_residual,
                 file_name=f"{filename_residual}_out.wf",
             )
             if verbose:
@@ -1295,14 +1313,16 @@ is going to be generated for this selection."
             csf_coefficients_discarded_all,
             csfs_discarded_all,
             CI_coefficients_discarded_all,
+            energies=energies_discarded,
             file_name=f"{filename_discarded_all}_out.wf",
         )
+        exit()
 
         # print info file
         with open("info.txt", "w") as reffile:
             reffile.write(
                 f"""selected csfs:\t{len(csfs_selected)}
-threshold:\t{CI_coefficient_thresh}
+threshold:\t{energies_optimized}
 number of csfs in next iteration wf:\t{len(csf_coefficients[:split_at])}
 number of csfs in residual wf:\t{len(csf_coefficients[split_at:])}
  """

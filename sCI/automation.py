@@ -234,10 +234,10 @@ mpiexec -np {n_tasks} {path} {ami_name}.ami
                         f"{energy_ami}.amo",
                         f"{last_wavefunction}.amo",
                     )
-                    mv(
-                        f"{self.wavefunction_name}.wf",
-                        f"{last_wavefunction}.wf",
-                    )
+                mv(
+                    f"{self.wavefunction_name}.wf",
+                    f"{last_wavefunction}.wf",
+                )
 
                 # get next block
                 self.sCI.select_and_do_next_package(

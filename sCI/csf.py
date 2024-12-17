@@ -1206,17 +1206,7 @@ is going to be generated for this selection."
             CI_coefficients_discarded,
             energies_discarded,
         ) = tmp_scnd
-        print(energies_selected)
-        print()
-        print(CI_coefficients_selected)
-        print()
-        print(csfs_selected)
-        print()
-        print(energies_discarded)
-        print()
-        print(CI_coefficients_discarded)
-        print()
-        print(csfs_discarded)
+
         # take n_min number of csfs by largest CI coefficients
         if len(csfs_selected) < n_min:
             (
@@ -1257,7 +1247,8 @@ is going to be generated for this selection."
                 CI_coefficients_selected[:n_min],
                 energies_selected[:n_min],
             )
-        print(f"number of selected csfs {len(csfs_selected)}")
+        if verbose:
+            print(f"number of selected csfs {len(csfs_selected)}")
 
         # full wavefunction without already discarded csfs
         csf_coefficients = (
@@ -1316,7 +1307,6 @@ is going to be generated for this selection."
             energies=energies_discarded,
             file_name=f"{filename_discarded_all}_out.wf",
         )
-        exit()
 
         # print info file
         with open("info.txt", "w") as reffile:

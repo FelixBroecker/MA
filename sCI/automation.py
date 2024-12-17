@@ -193,6 +193,22 @@ mpiexec -np {n_tasks} {path} {ami_name}.ami
             print()
             n_block += 1
             dir_name = f"block{n_block}"
+            # TODO Remove later
+            ###############
+            with cd(dir_name):
+                self.sCI.select_and_do_next_package(
+                    self.N,
+                    f"{last_wavefunction}_dis",
+                    f"{last_wavefunction}",
+                    f"{last_wavefunction}_res",
+                    self.threshold,
+                    self.criterion,
+                    split_at=self.blocksize,
+                    n_min=self.n_min,
+                    verbose=self.verbose,
+                )
+            exit()
+            ###############
             mkdir(dir_name)
 
             # get wavefunctions from previous iterations

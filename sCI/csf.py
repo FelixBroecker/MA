@@ -123,10 +123,9 @@ class SelectedCI:
             except FileNotFoundError:
                 if verbose:
                     print(
-                        f"File {filename} could not be found for\
+                        f"File {filename} could not be found for \
 to read AMOLQC wavefunction."
                     )
-                    print()
         return csf_coefficients, csfs, CI_coefficients, pretext
 
     def parse_csf_energies(
@@ -144,7 +143,7 @@ to read AMOLQC wavefunction."
                 found = False
                 counter = 0
                 for line in reffile:
-                    if counter == n_csfs:
+                    if counter == n_csfs - 1:
                         break
                     if found:
                         counter += 1
@@ -160,10 +159,9 @@ to read AMOLQC wavefunction."
         except FileNotFoundError:
             if verbose:
                 print(
-                    f"File {input_amo} could not be found\
+                    f"File {input_amo} could not be found \
 to parse CSF energy contributions."
                 )
-                print()
         return indices, energies
 
     def get_transformation_matrix(
@@ -1068,9 +1066,10 @@ to parse CSF energy contributions."
 
         if not csf_coefficients_discarded_all and verbose:
             print(
-                f"File {filename_discarded_all}.wf . \
+                f"File {filename_discarded_all}.wf \
 is going to be generated for this selection."
             )
+            print()
 
         energies_discarded_all = []
         if criterion == "energy":
@@ -1086,6 +1085,7 @@ is going to be generated for this selection."
                     f"File {filename_optimized} \
 is going to be generated for this selection."
                 )
+                print()
 
         # read optimized wavefunction and energies
 
@@ -1100,7 +1100,7 @@ is going to be generated for this selection."
         if criterion == "energy":
             _, energies_optimized = self.parse_csf_energies(
                 f"{filename_optimized}",
-                len(csfs_discarded_all),
+                len(csfs_optimized),
                 sort_by_idx=True,
                 verbose=True,
             )
@@ -1119,11 +1119,12 @@ is going to be generated for this selection."
                 f"File {filename_residual} \
 is going to be generated for this selection."
             )
+            print()
 
         energies_residual = []
         if criterion == "energy":
             _, energies_residual = self.parse_csf_energies(
-                f"{filename_optimized}_res.nrg",
+                f"{filename_optimized}_res",
                 len(csfs_residual),
                 sort_by_idx=True,
                 verbose=True,
@@ -1134,6 +1135,7 @@ is going to be generated for this selection."
                     f"File {filename_optimized} \
 is going to be generated for this selection."
                 )
+                print()
 
         # TODO start from here also with energy criterion
         # sort discarded coefficients by ci_coefficient or energy
@@ -1194,6 +1196,7 @@ is going to be generated for this selection."
         print(CI_coefficients_selected)
         print()
         print(CI_coefficients_discarded)
+        exit()
         # take n_min number of csfs by largest CI coefficients
         if len(csfs_selected) < n_min:
             (

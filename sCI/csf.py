@@ -1143,6 +1143,10 @@ is going to be generated for this selection."
         ref_list_optimized = []
         absol = False
         if criterion == "energy":
+            # add energy contribution for HF determinant, which shall
+            # be largest contribution in the list. This excplicit contribution
+            # is not physical vut HF has largest contribution to full wf.
+            energies_optimized.insert(0, np.ceil(max(energies_optimized)))
             ref_list_optimized = energies_optimized.copy()
             ref_list_discarded_all = energies_discarded_all.copy()
             absol = False
@@ -1150,7 +1154,8 @@ is going to be generated for this selection."
             ref_list_discarded_all = CI_coefficients_discarded_all.copy()
             ref_list_optimized = CI_coefficients_optimized.copy()
             absol = True
-
+        print(len(ref_list_optimized))
+        print(len(csfs_optimized))
         # cut wavefunction by criterion
         (
             csf_coefficients_discarded_all,

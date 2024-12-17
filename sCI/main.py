@@ -71,6 +71,7 @@ def main():
     for key, value in input_data.items():
         for sub_key, sub_value in value.items():
             data[key][sub_key] = sub_value
+    # TODO print input mor readable
     print(data)
 
     N = data["MoleculeInformation"]["numberOfElectrons"]

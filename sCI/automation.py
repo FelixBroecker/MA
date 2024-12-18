@@ -167,7 +167,7 @@ mpiexec -np {n_tasks} {path} {ami_name}.ami
                     if self.verbose:
                         print("job not done yet.")
                     time.sleep(20)
-            
+
             # get last wavefunction
             last_wavefunction = self.get_final_wavefunction(initial_ami)
             print(last_wavefunction)
@@ -336,6 +336,10 @@ mpiexec -np {n_tasks} {path} {ami_name}.ami
             cp(f"../{input_wf}.wf", ".")
             mv(f"../{input_wf}_res.wf", ".")
             mv(f"../{input_wf}_dis.wf", ".")
+            try:
+                mv(f"../{last_wavefunction}_nrg.amo", ".")
+            except FileNotFoundError:
+                pass
             #
             csf_coefficients, csfs, CI_coefficients, wfpretext = (
                 self.sCI.read_AMOLQC_csfs(f"{input_wf}.wf", self.N)
@@ -343,15 +347,36 @@ mpiexec -np {n_tasks} {path} {ami_name}.ami
             csf_coefficients_dis, csfs_dis, CI_coefficients_dis, _ = (
                 self.sCI.read_AMOLQC_csfs(f"{input_wf}_dis.wf", self.N)
             )
+
+            energies = []
+            energies_dis = []
+            if self.criterion == "energy_criterion":
+                _, energies_dis = self.sCI.parse_csf_energies(
+                    f"{input_wf}_dis.wf",
+                    len(csfs_dis),
+                    sort_by_idx=True,
+                    verbose=True,
+                )
+                _, energies = self.sCI.parse_csf_energies(
+                    f"{input_wf}.wf",
+                    len(csfs),
+                    sort_by_idx=True,
+                    verbose=True,
+                )
+
             csf_coefficients += csf_coefficients_dis
             csfs += csfs_dis
             CI_coefficients += CI_coefficients_dis
+            energies += energies_dis
+
             # keep all singe excitations
             idx = 0
             if self.keep_all_singles:
                 initial_determinant = self.sCI.build_energy_lowest_detetminant(
                     self.N
                 )
+                print(csfs)
+                print()
                 csf_coefficients, csfs, CI_coefficients = (
                     self.sCI.sort_order_of_csfs(
                         csf_coefficients,
@@ -364,11 +389,21 @@ mpiexec -np {n_tasks} {path} {ami_name}.ami
                 n_excitation = self.sCI.determine_excitations(
                     csfs, initial_determinant, "csf"
                 )
+                csf_coefficients, csfs, CI_coefficients, energies = (
+                    self.sCI.sort_lists_by_list(
+                        [csf_coefficients, csfs, CI_coefficients, energies],
+                        n_excitation,
+                    )
+                )
                 idx = 0
                 for i, n_excitation in enumerate(n_excitation):
                     if n_excitation > 1:
                         idx = i
                         break
+                print(n_excitation)
+                print(idx)
+                print(csfs)
+                exit()
 
             # sort csfs by CI coeffs
             csf_coefficients[idx:], csfs[idx:], CI_coefficients[idx:] = (

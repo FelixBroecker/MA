@@ -1095,7 +1095,7 @@ is going to be generated for this selection."
 
             if not energies_discarded_all and verbose:
                 print(
-                    f"File {filename_optimized} \
+                    f"File {filename_optimized}_dis.wf \
 is going to be generated for this selection."
                 )
                 print()
@@ -1129,26 +1129,10 @@ is going to be generated for this selection."
 
         if not csfs_residual and verbose:
             print(
-                f"File {filename_residual} \
+                f"File {filename_residual}.wf \
 is going to be generated for this selection."
             )
             print()
-
-        energies_residual = []
-        if criterion == "energy":
-            _, energies_residual = self.parse_csf_energies(
-                f"{filename_optimized}_res.wf",
-                len(csfs_residual),
-                sort_by_idx=True,
-                verbose=True,
-            )
-
-            if not energies_residual and verbose:
-                print(
-                    f"File {filename_optimized} \
-is going to be generated for this selection."
-                )
-                print()
 
         # sort discarded coefficients by ci_coefficient or energy
         ref_list_discarded_all = []
@@ -1283,7 +1267,6 @@ is going to be generated for this selection."
                 csf_coefficients[split_at:],
                 csfs[split_at:],
                 CI_coefficients[split_at:],
-                energies=energies_residual,
                 file_name=f"{filename_residual}_out.wf",
             )
             if verbose:

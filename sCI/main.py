@@ -190,9 +190,10 @@ def main():
         # print(indices)
         # print(energies)
         # exit()
-        auto.do_block_iteration(
-            5, "block_initial", iteration_ami, energy_ami=energy_ami
-        )
+        # auto.do_block_iteration(
+        #     5, "block_initial", iteration_ami, energy_ami=energy_ami
+        # )
+        auto.do_final_block("block_final", "block5", final_ami)
 
     elif data["WavefunctionOptions"]["wavefunctionOperation"] == "add_singles":
 

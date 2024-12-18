@@ -350,7 +350,7 @@ mpiexec -np {n_tasks} {path} {ami_name}.ami
 
             energies = []
             energies_dis = []
-            if self.criterion == "energy_criterion":
+            if self.criterion == "energy":
                 _, energies_dis = self.sCI.parse_csf_energies(
                     f"{input_wf}_dis.wf",
                     len(csfs_dis),
@@ -358,7 +358,7 @@ mpiexec -np {n_tasks} {path} {ami_name}.ami
                     verbose=True,
                 )
                 _, energies = self.sCI.parse_csf_energies(
-                    f"{input_wf}.wf",
+                    f"{input_wf}_nrg.amo",
                     len(csfs),
                     sort_by_idx=True,
                     verbose=True,
@@ -399,19 +399,41 @@ mpiexec -np {n_tasks} {path} {ami_name}.ami
                         idx = i
                         break
 
-            # sort csfs by CI coeffs
-            csf_coefficients[idx:], csfs[idx:], CI_coefficients[idx:] = (
-                self.sCI.sort_lists_by_list(
-                    [
-                        csf_coefficients[idx:],
-                        csfs[idx:],
-                        CI_coefficients[idx:],
-                    ],
-                    CI_coefficients,
-                    side=-1,
-                    absol=True,
-                )
+            ref_list = []
+            absol = False
+            if self.criterion == "energy":
+                ref_list = energies
+                absol = False
+            elif self.criterion == "ci_coefficient":
+                ref_list = CI_coefficients
+                absol = True
+                # sort csfs by criterion+
+            print(csf_coefficients[idx:])
+            print(csfs[idx:])
+            print(CI_coefficients[idx:])
+            print(energies[idx:])
+            (
+                csf_coefficients[idx:],
+                csfs[idx:],
+                CI_coefficients[idx:],
+                energies[idx:],
+            ) = self.sCI.sort_lists_by_list(
+                [
+                    csf_coefficients[idx:],
+                    csfs[idx:],
+                    CI_coefficients[idx:],
+                    energies[idx:],
+                ],
+                ref_list,
+                side=-1,
+                absol=absol,
             )
+            print()
+            print(csf_coefficients[idx:])
+            print(csfs[idx:])
+            print(CI_coefficients[idx:])
+            print(energies[idx:])
+
             #
             self.sCI.write_AMOLQC(
                 csf_coefficients[: self.blocksize],
@@ -424,6 +446,7 @@ mpiexec -np {n_tasks} {path} {ami_name}.ami
                 csf_coefficients[self.blocksize :],
                 csfs[self.blocksize :],
                 CI_coefficients[self.blocksize :],
+                energies=energies[self.blocksize :],
                 file_name=f"{self.wavefunction_name}_dis.wf",
             )
 
@@ -448,6 +471,7 @@ mpiexec -np {n_tasks} {path} {ami_name}.ami
             # get last wavefunction and copy to folder with all blocks
             last_wavefunction = self.get_final_wavefunction(final_ami)
             cp(f"{last_wavefunction}.wf", f"../{dir_name}.wf")
+            rm(f"{final_ami}.ami")
             if self.verbose:
                 print()
                 print("finish final block.")

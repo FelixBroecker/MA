@@ -337,7 +337,7 @@ mpiexec -np {n_tasks} {path} {ami_name}.ami
             mv(f"../{input_wf}_res.wf", ".")
             mv(f"../{input_wf}_dis.wf", ".")
             try:
-                mv(f"../{last_wavefunction}_nrg.amo", ".")
+                mv(f"../{input_wf}_nrg.amo", ".")
             except FileNotFoundError:
                 pass
             #
@@ -375,8 +375,6 @@ mpiexec -np {n_tasks} {path} {ami_name}.ami
                 initial_determinant = self.sCI.build_energy_lowest_detetminant(
                     self.N
                 )
-                print(csfs)
-                print()
                 csf_coefficients, csfs, CI_coefficients = (
                     self.sCI.sort_order_of_csfs(
                         csf_coefficients,
@@ -396,14 +394,10 @@ mpiexec -np {n_tasks} {path} {ami_name}.ami
                     )
                 )
                 idx = 0
-                for i, n_excitation in enumerate(n_excitation):
-                    if n_excitation > 1:
+                for i, n_exc in enumerate(n_excitation):
+                    if n_exc > 1:
                         idx = i
                         break
-                print(n_excitation)
-                print(idx)
-                print(csfs)
-                exit()
 
             # sort csfs by CI coeffs
             csf_coefficients[idx:], csfs[idx:], CI_coefficients[idx:] = (
@@ -415,7 +409,7 @@ mpiexec -np {n_tasks} {path} {ami_name}.ami
                     ],
                     CI_coefficients,
                     side=-1,
-                    abs=True,
+                    absol=True,
                 )
             )
             #

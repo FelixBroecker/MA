@@ -35,9 +35,9 @@ class SelectedCI:
             out = "$csfs\n"
             out += f"{int(len(csfs)): >7}\n"
             for i, csf in enumerate(csfs):
-                out += f"{CI_coefficients[i]: >10.7f}       {len(csf)}\n"
+                out += f"{CI_coefficients[i]: >10.6E}       {len(csf)}\n"
                 for j, determinant in enumerate(csf):
-                    out += f" {csf_coefficients[i][j]: 9.7f}"
+                    out += f" {csf_coefficients[i][j]: 9.7E}"
                     for electron in determinant:
                         out += f"  {abs(electron)}"
                     out += "\n"
@@ -48,7 +48,7 @@ class SelectedCI:
             out = "$dets\n"
             out += f"{int(len(csfs)): >7}\n"
             for i, determinant in enumerate(csfs):
-                out += f"{CI_coefficients[i]: >10.7f}"
+                out += f"{CI_coefficients[i]: >10.6E}"
                 for electron in determinant:
                     out += f"  {abs(electron)}"
                 out += "\n"
@@ -1119,7 +1119,6 @@ is going to be generated for this selection."
             )
 
         # read residual CSFs and energies.
-
         (
             csf_coefficients_residual,
             csfs_residual,

@@ -170,7 +170,6 @@ mpiexec -np {n_tasks} {path} {ami_name}.ami
 
             # get last wavefunction
             last_wavefunction = self.get_final_wavefunction(initial_ami)
-            print(last_wavefunction)
             # compute energy criterion if required
             if self.criterion == "energy":
                 mv(f"{self.wavefunction_name}.wf", "tmp")
@@ -407,11 +406,7 @@ mpiexec -np {n_tasks} {path} {ami_name}.ami
             elif self.criterion == "ci_coefficient":
                 ref_list = CI_coefficients
                 absol = True
-                # sort csfs by criterion+
-            print(csf_coefficients[idx:])
-            print(csfs[idx:])
-            print(CI_coefficients[idx:])
-            print(energies[idx:])
+                # sort csfs by criterion
             (
                 csf_coefficients[idx:],
                 csfs[idx:],
@@ -428,12 +423,6 @@ mpiexec -np {n_tasks} {path} {ami_name}.ami
                 side=-1,
                 absol=absol,
             )
-            print()
-            print(csf_coefficients[idx:])
-            print(csfs[idx:])
-            print(CI_coefficients[idx:])
-            print(energies[idx:])
-
             #
             self.sCI.write_AMOLQC(
                 csf_coefficients[: self.blocksize],

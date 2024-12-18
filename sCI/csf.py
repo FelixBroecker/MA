@@ -128,7 +128,7 @@ class SelectedCI:
             except FileNotFoundError:
                 if verbose:
                     print(
-                        f"File {filename} could not be found for \
+                        f"File {filename} could not be found \
 to read AMOLQC wavefunction."
                     )
         return csf_coefficients, csfs, CI_coefficients, pretext
@@ -148,6 +148,8 @@ to read AMOLQC wavefunction."
                 found = False
                 counter = 0
                 for line in reffile:
+                    if found and "$end" in line:
+                        found = False
                     if counter == n_csfs - 1:
                         break
                     if found:
@@ -1110,7 +1112,7 @@ is going to be generated for this selection."
         energies_optimized = []
         if criterion == "energy":
             _, energies_optimized = self.parse_csf_energies(
-                f"{filename_optimized}.amo",
+                f"{filename_optimized}_nrg.amo",
                 len(csfs_optimized),
                 sort_by_idx=True,
                 verbose=True,
@@ -1158,29 +1160,12 @@ is going to be generated for this selection."
             # is not physical vut HF has largest contribution to full wf.
             energies_optimized.insert(0, np.ceil(max(energies_optimized)))
             ref_list_optimized = energies_optimized.copy()
-            ref_list_discarded_all = energies_discarded_all.copy()
+            ref_list_discarded_all = energies_discarded_all
             absol = False
         elif criterion == "ci_coefficient":
-            ref_list_discarded_all = CI_coefficients_discarded_all.copy()
-            ref_list_optimized = CI_coefficients_optimized.copy()
+            ref_list_discarded_all = CI_coefficients_discarded_all
+            ref_list_optimized = CI_coefficients_optimized
             absol = True
-        # cut wavefunction by criterion
-        (
-            csf_coefficients_discarded_all,
-            csfs_discarded_all,
-            CI_coefficients_discarded_all,
-            energies_discarded_all,
-        ) = self.sort_lists_by_list(
-            [
-                csf_coefficients_discarded_all,
-                csfs_discarded_all,
-                CI_coefficients_discarded_all,
-                energies_discarded_all,
-            ],
-            ref_list_discarded_all,
-            side=-1,
-            absol=absol,
-        )
         # cut wavefunction
         tmp_first, tmp_scnd = self.cut_lists(
             [
@@ -1266,6 +1251,24 @@ is going to be generated for this selection."
         CI_coefficients_discarded_all += CI_coefficients_discarded
         energies_discarded_all += energies_discarded
 
+        # sort discarded wavefunction and sort
+        (
+            csf_coefficients_discarded_all,
+            csfs_discarded_all,
+            CI_coefficients_discarded_all,
+            energies_discarded_all,
+        ) = self.sort_lists_by_list(
+            [
+                csf_coefficients_discarded_all,
+                csfs_discarded_all,
+                CI_coefficients_discarded_all,
+                energies_discarded_all,
+            ],
+            ref_list_discarded_all,
+            side=-1,
+            absol=absol,
+        )
+
         # print wavefunctions
         if split_at > 0:
             # prints csfs inlcusive the indice of split at in first wf and residual in second
@@ -1304,7 +1307,7 @@ is going to be generated for this selection."
             csf_coefficients_discarded_all,
             csfs_discarded_all,
             CI_coefficients_discarded_all,
-            energies=energies_discarded,
+            energies=energies_discarded_all,
             file_name=f"{filename_discarded_all}_out.wf",
         )
 

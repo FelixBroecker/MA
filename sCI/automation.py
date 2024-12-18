@@ -120,13 +120,9 @@ mpiexec -np {n_tasks} {path} {ami_name}.ami
             print(f"{input_wf}_dis.wf not found.")
         return n_csfs
 
-    def do_initial_block(
-        self,
-        block_label,
-        initial_ami: str,
-    ):
+    def do_initial_block(self, block_label, initial_ami: str, energy_ami=""):
         dir_name = f"block{block_label}"
-        mkdir(dir_name)
+        #        mkdir(dir_name)
 
         with cd(dir_name):
             cp(f"../{self.wavefunction_name}.wf", ".")
@@ -171,10 +167,44 @@ mpiexec -np {n_tasks} {path} {ami_name}.ami
                     if self.verbose:
                         print("job not done yet.")
                     time.sleep(20)
-            # get last wavefunction and copy to folder with all blocks
+            
+            # get last wavefunction
             last_wavefunction = self.get_final_wavefunction(initial_ami)
+            print(last_wavefunction)
+            # compute energy criterion if required
+            if self.criterion == "energy":
+                mv(f"{self.wavefunction_name}.wf", "tmp")
+                mv(
+                    f"{last_wavefunction}.wf",
+                    f"{self.wavefunction_name}.wf",
+                )
+                cp(f"../{energy_ami}.ami", ".")
+                self.print_job_file(
+                    self.partition,
+                    f"e_{dir_name}",
+                    self.n_tasks,
+                    energy_ami,
+                )
+                run("sbatch amolqc_job")
+                # check if job done
+                job_done = False
+                while not job_done:
+                    job_done = self.check_job_done(energy_ami)
+                    if not job_done:
+                        if self.verbose:
+                            print("job not done yet.")
+                        time.sleep(20)
+                mv(
+                    f"{self.wavefunction_name}.wf",
+                    f"{last_wavefunction}.wf",
+                )
+                mv("tmp", f"{self.wavefunction_name}.wf")
+                cp(f"{energy_ami}.amo", f"../{dir_name}_nrg.amo")
+                rm(f"{energy_ami}.ami")
+
             cp(f"{last_wavefunction}.wf", f"../{dir_name}.wf")
             cp(f"{self.wavefunction_name}_res.wf", f"../{dir_name}_res.wf")
+            rm(f"{initial_ami}.ami")
 
         if self.verbose:
             print("finish initial block.")
@@ -201,43 +231,12 @@ mpiexec -np {n_tasks} {path} {ami_name}.ami
                     mv(f"../{last_wavefunction}_dis.wf", ".")
                 except FileNotFoundError:
                     pass
+                try:
+                    mv(f"../{last_wavefunction}_nrg.amo", ".")
+                except FileNotFoundError:
+                    pass
                 cp(f"../{last_wavefunction}.wf", ".")
                 mv(f"../{last_wavefunction}_res.wf", ".")
-
-                # compute energy criterion if required
-                if self.criterion == "energy":
-                    mv(
-                        f"{last_wavefunction}.wf",
-                        f"{self.wavefunction_name}.wf",
-                    )
-                    _, csfs, _, _ = self.sCI.read_AMOLQC_csfs(
-                        f"{self.wavefunction_name}.wf", self.N
-                    )
-                    n_csfs = len(csfs)
-                    cp(f"../{energy_ami}.ami", ".")
-                    self.print_job_file(
-                        self.partition,
-                        f"e_{dir_name}",
-                        self.n_tasks,
-                        energy_ami,
-                    )
-                    run("sbatch amolqc_job")
-                    # check if job done
-                    job_done = False
-                    while not job_done:
-                        job_done = self.check_job_done(energy_ami)
-                        if not job_done:
-                            if self.verbose:
-                                print("job not done yet.")
-                            time.sleep(20)
-                    mv(
-                        f"{energy_ami}.amo",
-                        f"{last_wavefunction}.amo",
-                    )
-                mv(
-                    f"{self.wavefunction_name}.wf",
-                    f"{last_wavefunction}.wf",
-                )
 
                 # get next block
                 self.sCI.select_and_do_next_package(
@@ -279,7 +278,39 @@ mpiexec -np {n_tasks} {path} {ami_name}.ami
                         if self.verbose:
                             print("job not done yet.")
                         time.sleep(20)
-                    # get last wavefunction and copy to folder with all blocks
+
+                # compute energy criterion if required
+                if self.criterion == "energy":
+                    mv(f"{self.wavefunction_name}.wf", "tmp")
+                    mv(
+                        f"{last_wavefunction}.wf",
+                        f"{self.wavefunction_name}.wf",
+                    )
+                    cp(f"../{energy_ami}.ami", ".")
+                    self.print_job_file(
+                        self.partition,
+                        f"e_{dir_name}",
+                        self.n_tasks,
+                        energy_ami,
+                    )
+                    run("sbatch amolqc_job")
+                    # check if job done
+                    job_done = False
+                    while not job_done:
+                        job_done = self.check_job_done(energy_ami)
+                        if not job_done:
+                            if self.verbose:
+                                print("job not done yet.")
+                            time.sleep(20)
+                    mv(
+                        f"{self.wavefunction_name}.wf",
+                        f"{last_wavefunction}.wf",
+                    )
+                    mv("tmp", f"{self.wavefunction_name}.wf")
+                    cp(f"{energy_ami}.amo", f"../{dir_name}_nrg.amo")
+                    rm(f"{energy_ami}.ami")
+
+                # get last wavefunction and copy to folder with all blocks
                 optimized_wf = self.get_final_wavefunction(blockwise_ami)
                 cp(f"{optimized_wf}.wf", f"../{dir_name}.wf")
                 cp(
@@ -290,6 +321,7 @@ mpiexec -np {n_tasks} {path} {ami_name}.ami
                     f"{self.wavefunction_name}_dis.wf",
                     f"../{dir_name}_dis.wf",
                 )
+                rm(f"{blockwise_ami}.ami")
                 last_wavefunction = dir_name
         if self.verbose:
             print("finish blockwise optimization")
@@ -532,7 +564,7 @@ mpiexec -np {n_tasks} {path} {ami_name}.ami
         # initial block with adding jastrow and optimizing jastrow
         #
         n_block = "_initial"
-        self.do_initial_block(n_block, initial_ami)
+        self.do_initial_block(n_block, initial_ami, energy_ami=energy_ami)
         # perform blockwise iterations
         #
         self.n_all_csfs = self.get_n_all_csfs("block_initial")

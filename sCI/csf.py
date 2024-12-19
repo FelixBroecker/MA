@@ -150,7 +150,7 @@ to read AMOLQC wavefunction."
                 for line in reffile:
                     if found and "$end" in line:
                         found = False
-                    if counter == n_csfs - 1:
+                    if counter == n_csfs:
                         break
                     if found:
                         counter += 1
@@ -1100,6 +1100,8 @@ is going to be generated for this selection."
                 )
                 print()
 
+        print(len(energies_discarded_all))
+
         # read optimized wavefunction and energies
 
         (
@@ -1113,7 +1115,7 @@ is going to be generated for this selection."
         if criterion == "energy":
             _, energies_optimized = self.parse_csf_energies(
                 f"{filename_optimized}_nrg.amo",
-                len(csfs_optimized),
+                len(csfs_optimized) - 1,
                 sort_by_idx=True,
                 verbose=True,
             )
@@ -1174,7 +1176,6 @@ is going to be generated for this selection."
             CI_coefficients_discarded,
             energies_discarded,
         ) = tmp_scnd
-
         # take n_min number of csfs by largest CI coefficients
         if len(csfs_selected) < n_min:
             (
@@ -1234,7 +1235,13 @@ is going to be generated for this selection."
         CI_coefficients_discarded_all += CI_coefficients_discarded
         energies_discarded_all += energies_discarded
 
+        print(len(csfs_discarded_all))
+        print(len(energies_discarded_all))
+        print(len(ref_list_discarded_all))
         # sort discarded wavefunction and sort
+        # print(len(csfs_selected))
+        print()
+        exit()
         (
             csf_coefficients_discarded_all,
             csfs_discarded_all,
@@ -1297,7 +1304,8 @@ is going to be generated for this selection."
         with open("info.txt", "w") as reffile:
             reffile.write(
                 f"""selected csfs:\t{len(csfs_selected)}
-threshold:\t{energies_optimized}
+threshold:\t{threshold}
+energies:\t{energies_optimized}
 number of csfs in next iteration wf:\t{len(csf_coefficients[:split_at])}
 number of csfs in residual wf:\t{len(csf_coefficients[split_at:])}
  """

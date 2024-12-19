@@ -244,6 +244,21 @@ mpiexec -np {n_tasks} {path} {ami_name}.ami
                 cp(f"../{last_wavefunction}.wf", ".")
                 mv(f"../{last_wavefunction}_res.wf", ".")
 
+                # check if there are still residual csfs or dets
+                (
+                    _,
+                    csfs_residual,
+                    _,
+                    _,
+                ) = self.sCI.read_AMOLQC_csfs(
+                    f"{last_wavefunction}_re.wf", self.N
+                )
+                if len(csfs_residual) == 0:
+                    print(
+                        "Residual wavefunction is empty, thus the \
+blockwise opimization is finished."
+                    )
+
                 # get next block
                 self.sCI.select_and_do_next_package(
                     self.N,

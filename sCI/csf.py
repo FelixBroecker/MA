@@ -365,7 +365,15 @@ to parse CSF energy contributions."
             list_of_lists[idx] = [list_of_lists[idx][i] for i in indices]
         return list_of_lists
 
-    def cut_lists(self, list_of_lists, ref_list, thresh, side=1, absol=False):
+    def cut_lists(
+        self,
+        list_of_lists,
+        ref_list,
+        thresh,
+        threshold_type="cut_at",
+        side=1,
+        absol=False,
+    ):
         """cut off csf coefficients, csfs, and CI coefficients by the
         size of the CI coefficients.
         Parameters
@@ -390,8 +398,8 @@ to parse CSF energy contributions."
         second_parts : list of lists
             list that contains all second parts of cut input list.
         """
-        # sort CI coefficients from largest to smallest absolut value and
-        # respectively csfs and csf_coefficients
+        # sort ref list from largest to smallest absolut value or vice versa
+        # and respectively csfs and csf_coefficients
         sorted_list_of_lists = self.sort_lists_by_list(
             list_of_lists,
             ref_list,
@@ -405,23 +413,41 @@ to parse CSF energy contributions."
             absol=absol,
         )
         sorted_ref_list = sorted_ref_list[0]
-        # cut off csfs below CI coefficient threshold
+
         cut_off = False
-        for i, coeff in enumerate(sorted_ref_list):
+        if threshold_type == "cut_at":
+            # cut off csfs below threshold
+            for i, coeff in enumerate(sorted_ref_list):
+                if absol:
+                    lower = abs(coeff) < thresh
+                else:
+                    lower = coeff < thresh
+                if lower:
+                    cut_off = True
+                    i_cut = i
+                    break
+        elif threshold_type == "sum_up":
             if absol:
-                lower = abs(coeff) < thresh
+                sum_of_ref_list = sum(abs(sorted_ref_list))
             else:
-                lower = coeff < thresh
-            if lower:
-                cut_off = True
-                i_cut = i
-                break
+                sum_of_ref_list = sum(x for x in sorted_ref_list if x > 0)
+
+            # this selection requires the ref_list to be sorted already
+            # from large to small values due to the occurence of negative
+            # values
+            sum_k = 0
+            for k, val in enumerate(sum_of_ref_list):
+                sum_k += val
+                percentage = sum_k / sum_of_ref_list
+                if percentage > thresh:
+                    i_cut = k
+                    break
 
         first_parts = []
         second_parts = []
         if cut_off:
             for lst in sorted_list_of_lists:
-                first_parts.append(lst[:i_cut:])
+                first_parts.append(lst[:i_cut])
                 second_parts.append(lst[i_cut:])
         else:
             first_parts = sorted_list_of_lists
@@ -1053,6 +1079,7 @@ to parse CSF energy contributions."
         filename_residual,
         threshold,
         criterion: str,
+        threshold_type="cut_at",
         split_at=0,
         n_min=0,
         verbose=False,
@@ -1161,6 +1188,7 @@ is going to be generated for this selection."
             ],
             ref_list_optimized,
             threshold,
+            threshold_type=threshold_type,
             side=-1,
             absol=absol,
         )
@@ -1235,13 +1263,6 @@ is going to be generated for this selection."
         CI_coefficients_discarded_all += CI_coefficients_discarded
         energies_discarded_all += energies_discarded
 
-        print(len(csfs_discarded_all))
-        print(len(energies_discarded_all))
-        print(len(ref_list_discarded_all))
-        # sort discarded wavefunction and sort
-        # print(len(csfs_selected))
-        print()
-        exit()
         (
             csf_coefficients_discarded_all,
             csfs_discarded_all,

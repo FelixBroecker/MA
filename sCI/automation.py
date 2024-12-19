@@ -279,12 +279,15 @@ mpiexec -np {n_tasks} {path} {ami_name}.ami
                         if self.verbose:
                             print("job not done yet.")
                         time.sleep(20)
+                optimized_wavefunction = self.get_final_wavefunction(
+                    blockwise_ami
+                )
 
                 # compute energy criterion if required
                 if self.criterion == "energy":
                     mv(f"{self.wavefunction_name}.wf", "tmp")
                     mv(
-                        f"{last_wavefunction}.wf",
+                        f"{optimized_wavefunction}.wf",
                         f"{self.wavefunction_name}.wf",
                     )
                     cp(f"../{energy_ami}.ami", ".")
@@ -305,15 +308,14 @@ mpiexec -np {n_tasks} {path} {ami_name}.ami
                             time.sleep(20)
                     mv(
                         f"{self.wavefunction_name}.wf",
-                        f"{last_wavefunction}.wf",
+                        f"{optimized_wavefunction}.wf",
                     )
                     mv("tmp", f"{self.wavefunction_name}.wf")
                     cp(f"{energy_ami}.amo", f"../{dir_name}_nrg.amo")
                     rm(f"{energy_ami}.ami")
 
-                # get last wavefunction and copy to folder with all blocks
-                optimized_wf = self.get_final_wavefunction(blockwise_ami)
-                cp(f"{optimized_wf}.wf", f"../{dir_name}.wf")
+                # copy results to folder with all blocks
+                cp(f"{optimized_wavefunction}.wf", f"../{dir_name}.wf")
                 cp(
                     f"{self.wavefunction_name}_res.wf",
                     f"../{dir_name}_res.wf",

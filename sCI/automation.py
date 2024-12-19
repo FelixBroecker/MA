@@ -26,6 +26,7 @@ class Automation:
         verbose,
         n_min,
         threshold,
+        threshold_type,
         keep_all_singles,
     ):
         self.sCI = SelectedCI()
@@ -47,6 +48,7 @@ class Automation:
         self.criterion = criterion
         self.n_min = n_min
         self.threshold = threshold
+        self.threshold_type = threshold_type
         self.keep_all_singles = keep_all_singles
         self.n_all_csfs = 0
 
@@ -362,6 +364,11 @@ mpiexec -np {n_tasks} {path} {ami_name}.ami
                     sort_by_idx=True,
                     verbose=True,
                 )
+                # add energy contribution for HF determinant, which shall
+                # be largest contribution in the list. This excplicit
+                # contribution is not physical but HF has largest
+                # contribution to full wf.
+                energies.insert(0, np.ceil(max(energies)))
 
             csf_coefficients += csf_coefficients_dis
             csfs += csfs_dis

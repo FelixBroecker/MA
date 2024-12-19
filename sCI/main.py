@@ -56,6 +56,7 @@ def main():
         "Specifications": {
             "criterion": "",
             "threshold": 1.0,
+            "thresholdType": "cut"
             "keepMin": 0,
             "blocksize": 0,
             "initialAMI": "",
@@ -90,6 +91,7 @@ def main():
 
     criterion = data["Specifications"]["criterion"]
     threshold = data["Specifications"]["threshold"]
+    threshold_type = data["Specifications"]["thresholdType"]
     n_min = data["Specifications"]["keepMin"]
     blocksize = data["Specifications"]["blocksize"]
     initial_ami = data["Specifications"]["initialAMI"]
@@ -120,6 +122,7 @@ def main():
         True,
         n_min,
         threshold,
+        threshold_type,
         keep_all_singles,
     )
     evaluation = Evaluation()
@@ -190,10 +193,10 @@ def main():
         # print(indices)
         # print(energies)
         # exit()
-        # auto.do_block_iteration(
-        #     5, "block_initial", iteration_ami, energy_ami=energy_ami
-        # )
-        auto.do_final_block("final", "block5", final_ami)
+        auto.do_block_iteration(
+            6, "block1", iteration_ami, energy_ami=energy_ami
+        )
+    # auto.do_final_block("final", "block5", final_ami)
 
     elif data["WavefunctionOptions"]["wavefunctionOperation"] == "add_singles":
 

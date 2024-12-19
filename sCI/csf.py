@@ -1142,7 +1142,7 @@ is going to be generated for this selection."
         if criterion == "energy":
             # add energy contribution for HF determinant, which shall
             # be largest contribution in the list. This excplicit contribution
-            # is not physical vut HF has largest contribution to full wf.
+            # is not physical but HF has largest contribution to full wf.
             energies_optimized.insert(0, np.ceil(max(energies_optimized)))
             ref_list_optimized = energies_optimized.copy()
             ref_list_discarded_all = energies_discarded_all

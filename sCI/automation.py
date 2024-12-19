@@ -211,7 +211,11 @@ mpiexec -np {n_tasks} {path} {ami_name}.ami
             print("finish initial block.")
 
     def do_block_iteration(
-        self, n_blocks: int, input_wf: str, blockwise_ami: str, energy_ami=""
+        self,
+        n_blocks: int,
+        input_wf: str,
+        blockwise_ami: str,
+        energy_ami="",
     ):
         """"""
         if self.verbose:
@@ -219,9 +223,10 @@ mpiexec -np {n_tasks} {path} {ami_name}.ami
         n_block = 0
         last_wavefunction = input_wf
         for i in range(n_blocks):
-            print()
-            print(f"Block iteration: {i+1}/{n_blocks}")
-            print()
+            if self.verbose:
+                print()
+                print(f"Block iteration: {i+1}/{n_blocks}")
+                print()
             n_block += 1
             dir_name = f"block{n_block}"
             mkdir(dir_name)
@@ -247,6 +252,7 @@ mpiexec -np {n_tasks} {path} {ami_name}.ami
                     f"{last_wavefunction}_res",
                     self.threshold,
                     self.criterion,
+                    threshold_type=self.threshold_type,
                     split_at=self.blocksize,
                     n_min=self.n_min,
                     verbose=self.verbose,
@@ -362,7 +368,7 @@ mpiexec -np {n_tasks} {path} {ami_name}.ami
                 )
                 _, energies = self.sCI.parse_csf_energies(
                     f"{input_wf}_nrg.amo",
-                    len(csfs),
+                    len(csfs) - 1,
                     sort_by_idx=True,
                     verbose=True,
                 )

@@ -371,6 +371,7 @@ to parse CSF energy contributions."
         ref_list,
         thresh,
         threshold_type="cut_at",
+        mask=[],
         side=1,
         absol=False,
     ):
@@ -398,6 +399,9 @@ to parse CSF energy contributions."
         second_parts : list of lists
             list that contains all second parts of cut input list.
         """
+        # TODO generalize use of mask list for full function
+        if not mask:
+            mask = [True for _ in range(len(ref_list))]
         # sort ref list from largest to smallest absolut value or vice versa
         # and respectively csfs and csf_coefficients
         sorted_list_of_lists = self.sort_lists_by_list(
@@ -428,19 +432,34 @@ to parse CSF energy contributions."
                     break
         elif threshold_type == "sum_up":
             if absol:
-                sum_of_ref_list = sum(abs(sorted_ref_list))
+                temp_sorted_ref_list = [abs(x) for x in sorted_ref_list]
             else:
-                sum_of_ref_list = sum(x for x in sorted_ref_list if x > 0)
+                temp_sorted_ref_list = sorted_ref_list
+            sum_of_ref_list = sum(
+                x
+                for i, x in enumerate(temp_sorted_ref_list)
+                if x > 0 and mask[i]
+            )
+            print(sum_of_ref_list)
+            print()
 
             # this selection requires the ref_list to be sorted already
             # from large to small values due to the occurence of negative
             # values
             sum_k = 0
-            for k, val in enumerate(sum_of_ref_list):
+            for k, val in enumerate(temp_sorted_ref_list):
+                if not mask[k]:
+                    continue
                 sum_k += val
                 percentage = sum_k / sum_of_ref_list
+                print(percentage)
                 if percentage > thresh:
+                    print()
+                    print(sum_k)
+                    print()
+                    print(f"cut off at {k}")
                     i_cut = k
+                    cut_off = True
                     break
 
         first_parts = []
@@ -1127,8 +1146,6 @@ is going to be generated for this selection."
                 )
                 print()
 
-        print(len(energies_discarded_all))
-
         # read optimized wavefunction and energies
 
         (
@@ -1174,9 +1191,11 @@ is going to be generated for this selection."
             ref_list_optimized = energies_optimized.copy()
             ref_list_discarded_all = energies_discarded_all
             absol = False
+            mask = [False] + [True for _ in range(len(ref_list_optimized) - 1)]
         elif criterion == "ci_coefficient":
             ref_list_discarded_all = CI_coefficients_discarded_all
             ref_list_optimized = CI_coefficients_optimized
+            mask = [True for _ in range(len(ref_list_optimized))]
             absol = True
         # cut wavefunction
         tmp_first, tmp_scnd = self.cut_lists(
@@ -1189,6 +1208,7 @@ is going to be generated for this selection."
             ref_list_optimized,
             threshold,
             threshold_type=threshold_type,
+            mask=mask,
             side=-1,
             absol=absol,
         )

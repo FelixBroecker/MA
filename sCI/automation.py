@@ -737,4 +737,4 @@ blockwise opimization is finished."
             self.excitations,
         )
         # final block
-        # self.do_final_block("final", f"{last_it}", final_ami)
+        self.do_final_block("final", f"{last_it}", final_ami)

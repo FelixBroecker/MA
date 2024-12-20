@@ -204,7 +204,10 @@ mpiexec -np {n_tasks} {path} {ami_name}.ami
                 rm(f"{energy_ami}.ami")
 
             cp(f"{last_wavefunction}.wf", f"../{dir_name}.wf")
-            cp(f"{self.wavefunction_name}_res.wf", f"../{dir_name}_res.wf")
+            try:
+                cp(f"{self.wavefunction_name}_res.wf", f"../{dir_name}_res.wf")
+            except FileNotFoundError:
+                pass
             rm(f"{initial_ami}.ami")
 
         if self.verbose:
@@ -216,6 +219,7 @@ mpiexec -np {n_tasks} {path} {ami_name}.ami
         input_wf: str,
         blockwise_ami: str,
         energy_ami="",
+        ret=True,
     ):
         """"""
         if self.verbose:
@@ -251,14 +255,15 @@ mpiexec -np {n_tasks} {path} {ami_name}.ami
                     _,
                     _,
                 ) = self.sCI.read_AMOLQC_csfs(
-                    f"{last_wavefunction}_re.wf", self.N
+                    f"{last_wavefunction}_res.wf", self.N
                 )
                 if len(csfs_residual) == 0:
                     print(
                         "Residual wavefunction is empty, thus the \
 blockwise opimization is finished."
                     )
-
+                    return None
+                print(self.threshold_type)
                 # get next block
                 self.sCI.select_and_do_next_package(
                     self.N,
@@ -314,7 +319,7 @@ blockwise opimization is finished."
                     cp(f"../{energy_ami}.ami", ".")
                     self.print_job_file(
                         self.partition,
-                        f"e_{dir_name}",
+                        f"e_{n_block}",
                         self.n_tasks,
                         energy_ami,
                     )
@@ -349,8 +354,15 @@ blockwise opimization is finished."
                 last_wavefunction = dir_name
         if self.verbose:
             print("finish blockwise optimization")
+        if ret:
+            return dir_name
 
-    def do_final_block(self, block_label: str, input_wf: str, final_ami: str):
+    def do_final_block(
+        self,
+        block_label: str,
+        input_wf: str,
+        final_ami: str,
+    ):
         #
         # do finial selection from all CI coefficients
         #
@@ -554,6 +566,7 @@ blockwise opimization is finished."
         n_blocks: int,
         input_wf: str,
         iteration_ami: str,
+        energy_ami: str,
         reference_determinant: list,
         excitations: list,
         excitations_on_ini: list,
@@ -561,22 +574,27 @@ blockwise opimization is finished."
         """"""
         if self.verbose:
             print(f"number of selections {n_blocks}")
-        n_block = 0
+        n_it = 0
         last_wavefunction = input_wf
         excitations_on = excitations_on_ini
         for i in range(n_blocks):
             print()
             print(f"Block iteration: {i+1}/{n_blocks}")
             print()
-            n_block += 1
-            dir_name = f"it{n_block}"
-            dir_name = f"it5"
+            n_it += 1
+            dir_name = f"it{n_it}"
             mkdir(dir_name)
-            ## hard coded
             # number corresponds to n-tuple excitation
-            threshold = 0.0007
             # get wavefunctions from previous iterations
             with cd(dir_name):
+                try:
+                    mv(f"../{last_wavefunction}_dis.wf", ".")
+                except FileNotFoundError:
+                    pass
+                try:
+                    mv(f"../{last_wavefunction}_nrg.amo", ".")
+                except FileNotFoundError:
+                    pass
                 cp(f"../{last_wavefunction}.wf", ".")
                 self.sCI.select_and_do_excitations(
                     self.N,
@@ -591,7 +609,10 @@ blockwise opimization is finished."
                     self.frozen_electrons,
                     self.frozen_MOs,
                     last_wavefunction,
-                    threshold,
+                    f"{last_wavefunction}_dis",
+                    self.criterion,
+                    self.threshold,
+                    threshold_type=self.threshold_type,
                 )
                 mv(
                     f"{last_wavefunction}_out.wf",
@@ -618,8 +639,43 @@ blockwise opimization is finished."
                             print("job not done yet.")
                         time.sleep(20)
                     # get last wavefunction and copy to folder with all blocks
-                optimized_wf = self.get_final_wavefunction(iteration_ami)
-                cp(f"{optimized_wf}.wf", f"../{dir_name}.wf")
+                optimized_wavefunction = self.get_final_wavefunction(
+                    iteration_ami
+                )
+
+                # compute energy criterion if required
+                if self.criterion == "energy":
+                    mv(f"{self.wavefunction_name}.wf", "tmp")
+                    mv(
+                        f"{optimized_wavefunction}.wf",
+                        f"{self.wavefunction_name}.wf",
+                    )
+                    cp(f"../{energy_ami}.ami", ".")
+                    self.print_job_file(
+                        self.partition,
+                        f"e_{n_it}",
+                        self.n_tasks,
+                        energy_ami,
+                    )
+                    run("sbatch amolqc_job")
+                    # check if job done
+                    job_done = False
+                    while not job_done:
+                        job_done = self.check_job_done(energy_ami)
+                        if not job_done:
+                            if self.verbose:
+                                print("job not done yet.")
+                            time.sleep(20)
+                    mv(
+                        f"{self.wavefunction_name}.wf",
+                        f"{optimized_wavefunction}.wf",
+                    )
+                    mv("tmp", f"{self.wavefunction_name}.wf")
+                    cp(f"{energy_ami}.amo", f"../{dir_name}_nrg.amo")
+                    rm(f"{energy_ami}.ami")
+
+                # copy results to folder with all blocks
+                cp(f"{optimized_wavefunction}.wf", f"../{dir_name}.wf")
                 cp(
                     f"{self.wavefunction_name}_dis.wf",
                     f"../{dir_name}_dis.wf",
@@ -627,10 +683,16 @@ blockwise opimization is finished."
                 last_wavefunction = dir_name
                 excitations_on = [i + 1 for i in excitations_on]
         if self.verbose:
-            print("finish blockwise optimization")
+            print("finish selective iteration")
+        return last_wavefunction
 
     def blockwise_optimization(
-        self, initial_ami, blockwise_ami, final_ami, energy_ami=""
+        self,
+        initial_ami,
+        blockwise_ami,
+        final_ami,
+        energy_ami="",
+        max_blocks=1000,
     ):
         #
         # initial block with adding jastrow and optimizing jastrow
@@ -643,21 +705,36 @@ blockwise opimization is finished."
         n_blocks = math.ceil(
             (self.n_all_csfs - self.blocksize) / (self.blocksize - self.n_min)
         )
+        if self.threshold_type == "sum_up":
+            n_blocks = max_blocks
         # n_blocks = math.ceil(174 / (self.blocksize - self.n_min))
         # blockwise iteration
-        self.do_block_iteration(
+        last_block = self.do_block_iteration(
             n_blocks, "block_initial", blockwise_ami, energy_ami=energy_ami
         )
         # final block
-        self.do_final_block("final", f"block{n_blocks}", final_ami)
+        self.do_final_block("final", f"{last_block}", final_ami)
 
         # sCI.select_and_do_next_package("discarded", wavefunction_name, "residual", threshold_ci, split_at=split_at, n_min=n_min, verbose=True)
 
     def do_iterative_construction(
-        self, initial_ami, iteration_ami, reference_determinant
+        self,
+        initial_ami,
+        iteration_ami,
+        final_ami,
+        reference_determinant,
+        energy_ami="",
     ):
         """"""
-        # self.do_initial_block("_ini", initial_ami)
-        self.do_selective_iteration(
-            1, "it4", iteration_ami, reference_determinant, [1], [5]
+        # self.do_initial_block("_ini", initial_ami, energy_ami=energy_ami)
+        last_it = self.do_selective_iteration(
+            3,
+            "block_ini",
+            iteration_ami,
+            energy_ami,
+            reference_determinant,
+            [1],
+            self.excitations,
         )
+        # final block
+        # self.do_final_block("final", f"{last_it}", final_ami)

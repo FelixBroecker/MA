@@ -95,6 +95,13 @@ class SelectedCI:
                             line = f.readline()
                             # initialize counter to iterate over csfs
                             csf_counter = 0
+                            if n_csfs == 0:
+                                return (
+                                    csf_coefficients,
+                                    csfs,
+                                    CI_coefficients,
+                                    pretext,
+                                )
                         if not found_csf and not found_det:
                             pretext += line
                         if found_csf:
@@ -440,8 +447,6 @@ to parse CSF energy contributions."
                 for i, x in enumerate(temp_sorted_ref_list)
                 if x > 0 and mask[i]
             )
-            print(sum_of_ref_list)
-            print()
 
             # this selection requires the ref_list to be sorted already
             # from large to small values due to the occurence of negative
@@ -452,11 +457,7 @@ to parse CSF energy contributions."
                     continue
                 sum_k += val
                 percentage = sum_k / sum_of_ref_list
-                print(percentage)
                 if percentage > thresh:
-                    print()
-                    print(sum_k)
-                    print()
                     print(f"cut off at {k}")
                     i_cut = k
                     cut_off = True
@@ -933,40 +934,157 @@ to parse CSF energy contributions."
         total_symmetry: str,
         frozen_elecs: list,
         frozen_MOs: list,
-        input_wf: str,
-        CI_coefficient_thresh: float,
+        filename_optimized: str,
+        filename_discarded_all: str,
+        criterion: str,
+        threshold: float,
+        threshold_type="cut_at",
         split_at=0,
         use_optimized_CI_coeffs=True,
         verbose=False,
     ):
-        """select csfs by size of their coefficients and do n-fold excitations of determinants in selected csfs."""
-        # TODO add n_min as second criterion beside the selection on threshold size
-        # read wavefunction with optimized CI coefficients
-        csf_coefficients, csfs, CI_coefficients, wfpretext = (
-            self.read_AMOLQC_csfs(f"{input_wf}.wf", N)
-        )
-        print(f"number of initial csfs from input wavefunction {len(csfs)}")
+        """select csfs by size of their coefficients and do n-fold
+        excitations of determinants in selected csfs."""
+        assert (
+            criterion == "energy" or criterion == "ci_coefficient"
+        ), "Criterion has to be energy or ci_coefficient."
 
+        # TODO add n_min as second criterion beside the selection on threshold size
+
+        # read discarded CSFs and energies.
+
+        (
+            csf_coefficients_discarded_all,
+            csfs_discarded_all,
+            CI_coefficients_discarded_all,
+            _,
+        ) = self.read_AMOLQC_csfs(
+            f"{filename_discarded_all}.wf", N, verbose=True
+        )
+
+        if not csf_coefficients_discarded_all and verbose:
+            print(
+                f"File {filename_discarded_all}.wf \
+is going to be generated for this selection."
+            )
+            print()
+
+        energies_discarded_all = []
+        if criterion == "energy":
+            _, energies_discarded_all = self.parse_csf_energies(
+                f"{filename_discarded_all}_dis.wf",
+                len(csfs_discarded_all),
+                sort_by_idx=True,
+                verbose=True,
+            )
+
+            if not energies_discarded_all and verbose:
+                print(
+                    f"File {filename_discarded_all}_dis.wf \
+is going to be generated for this selection."
+                )
+                print()
+
+        # read wavefunction with optimized CI coefficients
+        (
+            csf_coefficients_optimized,
+            csfs_optimized,
+            CI_coefficients_optimized,
+            wfpretext,
+        ) = self.read_AMOLQC_csfs(f"{filename_optimized}.wf", N)
+
+        energies_optimized = []
+        if criterion == "energy":
+            _, energies_optimized = self.parse_csf_energies(
+                f"{filename_optimized}_nrg.amo",
+                len(csfs_optimized) - 1,
+                sort_by_idx=True,
+                verbose=True,
+            )
+
+        print(
+            f"number of initial csfs from input \
+wavefunction {len(csfs_optimized)}"
+        )
+
+        ref_list_discarded_all = []
+        ref_list_optimized = []
+        mask = [True for _ in range(len(ref_list_optimized))]
+        absol = False
+        if criterion == "energy":
+            # add energy contribution for HF determinant, which shall
+            # be largest contribution in the list. This excplicit contribution
+            # is not physical but HF has largest contribution to full wf.
+            energies_optimized.insert(0, np.ceil(max(energies_optimized)))
+            ref_list_optimized = energies_optimized
+            ref_list_discarded_all = energies_discarded_all
+            absol = False
+            mask = [False] + [True for _ in range(len(ref_list_optimized) - 1)]
+        elif criterion == "ci_coefficient":
+            ref_list_discarded_all = CI_coefficients_discarded_all
+            ref_list_optimized = CI_coefficients_optimized
+            mask = [True for _ in range(len(ref_list_optimized))]
+            absol = True
         # cut of csfs by CI coefficient threshold
+        tmp_first, tmp_scnd = self.cut_lists(
+            [
+                csf_coefficients_optimized,
+                csfs_optimized,
+                CI_coefficients_optimized,
+                energies_optimized,
+            ],
+            ref_list_optimized,
+            threshold,
+            threshold_type=threshold_type,
+            mask=mask,
+            side=-1,
+            absol=absol,
+        )
         (
             csf_coefficients_selected,
             csfs_selected,
             CI_coefficients_selected,
+            energies_selected,
+        ) = tmp_first
+        (
             csf_coefficients_discarded,
             csfs_discarded,
             CI_coefficients_discarded,
-        ) = self.cut_lists(
-            csf_coefficients, csfs, CI_coefficients, CI_coefficient_thresh
+            energies_discarded,
+        ) = tmp_scnd
+
+        # unify all discarded entries and sort
+        csf_coefficients_discarded_all += csf_coefficients_discarded
+        csfs_discarded_all += csfs_discarded
+        CI_coefficients_discarded_all += CI_coefficients_discarded
+        energies_discarded_all += energies_discarded
+
+        (
+            csf_coefficients_discarded_all,
+            csfs_discarded_all,
+            CI_coefficients_discarded_all,
+            energies_discarded_all,
+        ) = self.sort_lists_by_list(
+            [
+                csf_coefficients_discarded_all,
+                csfs_discarded_all,
+                CI_coefficients_discarded_all,
+                energies_discarded_all,
+            ],
+            ref_list_discarded_all,
+            side=-1,
+            absol=absol,
         )
-        # write file with selected csfs
+
+        # write file with discarded csfs
         self.write_AMOLQC(
             csf_coefficients_discarded,
             csfs_discarded,
             CI_coefficients_discarded,
-            file_name=f"{input_wf}_dis_out.wf",
+            file_name=f"{filename_optimized}_dis_out.wf",
         )
 
-        # # expand cut csfs in determinants
+        # expand cut csfs in determinants
         _, _, determinant_basis_discarded = self.get_transformation_matrix(
             csf_coefficients_discarded,
             csfs_discarded,
@@ -1015,7 +1133,8 @@ to parse CSF energy contributions."
             excited_determinants
         )
 
-        # remove determinants that have already been visited and are found in the input wave function
+        # remove determinants that have already been visited and are
+        # found in the input wave function
         seen = set()
         for det in determinants_already_visited:
             det = sorted(det, key=self.custom_sort)
@@ -1054,7 +1173,8 @@ to parse CSF energy contributions."
         CI_coefficients = CI_coefficients_selected + CI_coefficients
         if verbose:
             print(
-                f"total number of csfs after adding selected ones {len(csf_coefficients)}"
+                f"total number of csfs after adding selected ones \
+{len(csf_coefficients)}"
             )
         # write wavefunction in AMOLQC format
         if split_at > 0:
@@ -1064,20 +1184,22 @@ to parse CSF energy contributions."
                 csfs[:split_at],
                 CI_coefficients[:split_at],
                 pretext=wfpretext,
-                file_name=f"{input_wf}_out.wf",
+                file_name=f"{filename_optimized}_out.wf",
             )
             self.write_AMOLQC(
                 csf_coefficients[split_at:],
                 csfs[split_at:],
                 CI_coefficients[split_at:],
-                file_name=f"{input_wf}_res_out.wf",
+                file_name=f"{filename_optimized}_res_out.wf",
             )
             if verbose:
                 print(
-                    f"number of csfs in next iteration wf: {len(csf_coefficients[:split_at])}"
+                    f"number of csfs in next iteration wf: \
+{len(csf_coefficients_optimized[:split_at])}"
                 )
                 print(
-                    f"number of csfs in residual wf: {len(csf_coefficients[split_at:])}"
+                    f"number of csfs in residual wf: \
+{len(csf_coefficients[split_at:])}"
                 )
                 print()
         else:
@@ -1087,7 +1209,7 @@ to parse CSF energy contributions."
                 csfs,
                 CI_coefficients,
                 pretext=wfpretext,
-                file_name=f"{input_wf}_out.wf",
+                file_name=f"{filename_optimized}_out.wf",
             )
 
     def select_and_do_next_package(
@@ -1183,6 +1305,7 @@ is going to be generated for this selection."
         ref_list_discarded_all = []
         ref_list_optimized = []
         absol = False
+        mask = [True for _ in range(len(ref_list_optimized))]
         if criterion == "energy":
             # add energy contribution for HF determinant, which shall
             # be largest contribution in the list. This excplicit contribution

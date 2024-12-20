@@ -183,7 +183,11 @@ def main():
     elif data["WavefunctionOptions"]["wavefunctionOperation"] == "iterative":
         initial_determinant = sCI.build_energy_lowest_detetminant(N)
         auto.do_iterative_construction(
-            initial_ami, iteration_ami, initial_determinant
+            initial_ami,
+            iteration_ami,
+            final_ami,
+            initial_determinant,
+            energy_ami=energy_ami,
         )
 
     elif data["WavefunctionOptions"]["wavefunctionOperation"] == "test":
@@ -194,9 +198,9 @@ def main():
         # print(energies)
         # exit()
         auto.do_block_iteration(
-            1, "block_initial", iteration_ami, energy_ami=energy_ami
+            1000, "block_initial", iteration_ami, energy_ami=energy_ami
         )
-    # auto.do_final_block("final", "block6", final_ami)
+        # auto.do_final_block("final", "block6", final_ami)
 
     elif data["WavefunctionOptions"]["wavefunctionOperation"] == "add_singles":
 

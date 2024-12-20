@@ -1078,9 +1078,10 @@ wavefunction {len(csfs_optimized)}"
 
         # write file with discarded csfs
         self.write_AMOLQC(
-            csf_coefficients_discarded,
-            csfs_discarded,
-            CI_coefficients_discarded,
+            csf_coefficients_discarded_all,
+            csfs_discarded_all,
+            CI_coefficients_discarded_all,
+            energies=energies_discarded_all
             file_name=f"{filename_optimized}_dis_out.wf",
         )
 

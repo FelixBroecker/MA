@@ -726,7 +726,7 @@ blockwise opimization is finished."
         energy_ami="",
     ):
         """"""
-        # self.do_initial_block("_ini", initial_ami, energy_ami=energy_ami)
+        self.do_initial_block("_ini", initial_ami, energy_ami=energy_ami)
         last_it = self.do_selective_iteration(
             3,
             "block_ini",

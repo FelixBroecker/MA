@@ -1081,7 +1081,7 @@ wavefunction {len(csfs_optimized)}"
             csf_coefficients_discarded_all,
             csfs_discarded_all,
             CI_coefficients_discarded_all,
-            energies=energies_discarded_all
+            energies=energies_discarded_all,
             file_name=f"{filename_optimized}_dis_out.wf",
         )
 

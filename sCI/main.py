@@ -10,6 +10,7 @@ from csf import SelectedCI
 from automation import Automation
 from evaluation import Evaluation
 from utils import Utils
+from cipsi_jas import AddSingles
 
 
 def main():
@@ -48,6 +49,7 @@ def main():
             "frozenElectrons": [],
             "frozenMOs": [],
             "splitAt": 0,
+            "maxCsfs": 1500,
         },
         "Output": {
             "plotCICoefficients": False,
@@ -88,6 +90,7 @@ def main():
     frozen_MOs = data["WavefunctionOptions"]["frozenMOs"]
     split_at = data["WavefunctionOptions"]["splitAt"]
     sort = data["WavefunctionOptions"]["sort"]
+    max_csfs = data["WavefunctionOptions"]["maxCsfs"]
 
     criterion = data["Specifications"]["criterion"]
     threshold = data["Specifications"]["threshold"]
@@ -124,6 +127,7 @@ def main():
         threshold,
         threshold_type,
         keep_all_singles,
+        max_csfs,
     )
     evaluation = Evaluation()
     utils = Utils()
@@ -197,12 +201,34 @@ def main():
         # print(indices)
         # print(energies)
         # exit()
-        auto.do_block_iteration(
-            1000, "block_initial", iteration_ami, energy_ami=energy_ami
-        )
-        # auto.do_final_block("final", "block6", final_ami)
+        #auto.do_block_iteration(
+        #    1000, "block_initial", iteration_ami, energy_ami=energy_ami
+        #)
+        #auto.do_final_iteration(
+        #    "it_final",
+        #    "it2",
+        #    500,
+        #    final_ami,
+        #    energy_ami=energy_ami
+        #    )
+        # reference_determinant = sCI.build_energy_lowest_detetminant(N)
+        # last_it = auto.do_selective_iteration(
+        #     1,
+        #     "it2",
+        #     iteration_ami,
+        #     energy_ami,
+        #     reference_determinant,
+        #     [1],
+        #     excitations,
+        # )
+        auto.do_final_block("final", "block24", final_ami)
 
     elif data["WavefunctionOptions"]["wavefunctionOperation"] == "add_singles":
+        aS = AddSingles()
+        aS.add_singles_det(N, n_MO, orbital_symmetry, point_group,
+                           frozen_electrons, frozen_MOs, wavefunction_name,
+                           "det")
+        exit()
 
         initial_determinant = sCI.build_energy_lowest_detetminant(N)
         excited_determinants = sCI.get_excitations(
@@ -265,7 +291,7 @@ def main():
         # get csfs from determinant basis and print wavefunction.
         # create guess for CI coefficients
         csf_coefficients, csfs = sCI.get_unique_csfs(
-            determinants[:1990], S, M_s
+            determinants, S, M_s
         )
         csf_coefficients, csfs = sCI.sort_determinants_in_csfs(
             csf_coefficients, csfs

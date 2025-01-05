@@ -78,64 +78,63 @@ class SelectedCI:
         csf_coefficient_tmp = []
         pretext = ""
         # read csfs
-        if wftype == "csf":
-            try:
-                with open(f"{filename}", "r") as f:
-                    found_csf = False
-                    found_det = False
-                    for line in f:
-                        if "$det" in line:
-                            found_det = True
-                        if "$csfs" in line:
-                            found_csf = True
-                            new_csf = True
-                            # extract number of csfs
-                            line = f.readline()
-                            n_csfs = int(line)
-                            line = f.readline()
-                            # initialize counter to iterate over csfs
-                            csf_counter = 0
-                            if n_csfs == 0:
-                                return (
-                                    csf_coefficients,
-                                    csfs,
-                                    CI_coefficients,
-                                    pretext,
+        try:
+            with open(f"{filename}", "r") as f:
+                found_csf = False
+                found_det = False
+                for line in f:
+                    if "$det" in line:
+                        found_det = True
+                    if "$csfs" in line:
+                        found_csf = True
+                        new_csf = True
+                        # extract number of csfs
+                        line = f.readline()
+                        n_csfs = int(line)
+                        line = f.readline()
+                        # initialize counter to iterate over csfs
+                        csf_counter = 0
+                        if n_csfs == 0:
+                            return (
+                                csf_coefficients,
+                                csfs,
+                                CI_coefficients,
+                                pretext,
+                            )
+                    if not found_csf and not found_det:
+                        pretext += line
+                    if found_csf:
+                        entries = line.split()
+                        if new_csf:
+                            CI_coefficients.append(float(entries[0]))
+                            n_summands = int(entries[1])
+                            summand_counter = 0
+                            new_csf = False
+                            csf_counter += 1
+                        else:
+                            det = []
+                            for i in range(1, len(entries)):
+                                if i <= n_elec / 2:
+                                    det.append(1 * int(entries[i]))
+                                else:
+                                    det.append(-1 * int(entries[i]))
+                            csf_coefficient_tmp.append(float(entries[0]))
+                            csf_tmp.append(det.copy())
+                            summand_counter += 1
+                            if summand_counter == n_summands:
+                                new_csf = True
+                                csf_coefficients.append(
+                                    csf_coefficient_tmp
                                 )
-                        if not found_csf and not found_det:
-                            pretext += line
-                        if found_csf:
-                            entries = line.split()
-                            if new_csf:
-                                CI_coefficients.append(float(entries[0]))
-                                n_summands = int(entries[1])
-                                summand_counter = 0
-                                new_csf = False
-                                csf_counter += 1
-                            else:
-                                det = []
-                                for i in range(1, len(entries)):
-                                    if i <= n_elec / 2:
-                                        det.append(1 * int(entries[i]))
-                                    else:
-                                        det.append(-1 * int(entries[i]))
-                                csf_coefficient_tmp.append(float(entries[0]))
-                                csf_tmp.append(det.copy())
-                                summand_counter += 1
-                                if summand_counter == n_summands:
-                                    new_csf = True
-                                    csf_coefficients.append(
-                                        csf_coefficient_tmp
-                                    )
-                                    csfs.append(csf_tmp)
-                                    csf_coefficient_tmp = []
-                                    csf_tmp = []
-                                    if csf_counter == n_csfs:
-                                        break
-            except FileNotFoundError:
-                if verbose:
-                    print(
-                        f"File {filename} could not be found \
+                                csfs.append(csf_tmp)
+                                csf_coefficient_tmp = []
+                                csf_tmp = []
+                                if csf_counter == n_csfs:
+                                    break
+        except FileNotFoundError:
+            if verbose:
+                print(
+                    f"File {filename} could not be found \
 to read AMOLQC wavefunction."
                     )
         return csf_coefficients, csfs, CI_coefficients, pretext
@@ -938,6 +937,7 @@ to parse CSF energy contributions."
         filename_discarded_all: str,
         criterion: str,
         threshold: float,
+        max_csfs: int,
         threshold_type="cut_at",
         split_at=0,
         use_optimized_CI_coeffs=True,
@@ -959,7 +959,7 @@ to parse CSF energy contributions."
             CI_coefficients_discarded_all,
             _,
         ) = self.read_AMOLQC_csfs(
-            f"{filename_discarded_all}.wf", N, verbose=True
+            f"{filename_discarded_all}.wf", N, verbose=verbose
         )
 
         if not csf_coefficients_discarded_all and verbose:
@@ -972,7 +972,7 @@ is going to be generated for this selection."
         energies_discarded_all = []
         if criterion == "energy":
             _, energies_discarded_all = self.parse_csf_energies(
-                f"{filename_discarded_all}_dis.wf",
+                f"{filename_discarded_all}.wf",
                 len(csfs_discarded_all),
                 sort_by_idx=True,
                 verbose=True,
@@ -980,7 +980,7 @@ is going to be generated for this selection."
 
             if not energies_discarded_all and verbose:
                 print(
-                    f"File {filename_discarded_all}_dis.wf \
+                    f"File {filename_discarded_all}.wf \
 is going to be generated for this selection."
                 )
                 print()
@@ -1053,6 +1053,7 @@ wavefunction {len(csfs_optimized)}"
             energies_discarded,
         ) = tmp_scnd
 
+
         # unify all discarded entries and sort
         csf_coefficients_discarded_all += csf_coefficients_discarded
         csfs_discarded_all += csfs_discarded
@@ -1087,9 +1088,9 @@ wavefunction {len(csfs_optimized)}"
 
         # expand cut csfs in determinants
         _, _, determinant_basis_discarded = self.get_transformation_matrix(
-            csf_coefficients_discarded,
-            csfs_discarded,
-            CI_coefficients_discarded,
+            csf_coefficients_discarded_all,
+            csfs_discarded_all,
+            CI_coefficients_discarded_all,
         )
 
         # expand selected csfs in determinants
@@ -1177,6 +1178,13 @@ wavefunction {len(csfs_optimized)}"
                 f"total number of csfs after adding selected ones \
 {len(csf_coefficients)}"
             )
+
+        # check stop criterion
+        done = False
+        if len(csfs) >= max_csfs:
+            split_at = max_csfs
+            done = True
+
         # write wavefunction in AMOLQC format
         if split_at > 0:
             # prints csfs inlcusive the indice of split at in first wf and residual in second
@@ -1212,6 +1220,16 @@ wavefunction {len(csfs_optimized)}"
                 pretext=wfpretext,
                 file_name=f"{filename_optimized}_out.wf",
             )
+        with open("info.txt", "w") as reffile:
+            reffile.write(
+                f"""selected csfs:\t{len(csfs_selected)}
+threshold:\t{threshold}
+energies:\t{energies_optimized}
+number of csfs in next iteration wf:\t{len(csf_coefficients[:split_at])}
+number of csfs in residual wf:\t{len(csf_coefficients[split_at:])}
+ """
+            )
+        return done
 
     def select_and_do_next_package(
         self,

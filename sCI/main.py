@@ -50,6 +50,7 @@ def main():
             "frozenMOs": [],
             "splitAt": 0,
             "maxCsfs": 1500,
+            "wfType": "csfs",
         },
         "Output": {
             "plotCICoefficients": False,
@@ -91,6 +92,7 @@ def main():
     split_at = data["WavefunctionOptions"]["splitAt"]
     sort = data["WavefunctionOptions"]["sort"]
     max_csfs = data["WavefunctionOptions"]["maxCsfs"]
+    wftype = data["WavefunctionOptions"]["wfType"]
 
     criterion = data["Specifications"]["criterion"]
     threshold = data["Specifications"]["threshold"]
@@ -233,7 +235,7 @@ def main():
             frozen_electrons,
             frozen_MOs,
             wavefunction_name,
-            "det",
+            wftype,
         )
         exit()
 

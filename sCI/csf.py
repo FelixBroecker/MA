@@ -24,7 +24,7 @@ class SelectedCI:
         CI_coefficients,
         pretext="",
         energies=[],
-        file_name="sCI/csfs.out",
+        file_name="sCI_out",
         write_file=True,
         verbose=False,
         wftype="csf",
@@ -85,6 +85,19 @@ class SelectedCI:
                 for line in f:
                     if "$det" in line:
                         found_det = True
+                        # extract number of csfs
+                        line = f.readline()
+                        n_dets = int(line)
+                        line = f.readline()
+                        det_counter = 0
+                        if n_dets == 0:
+                            return (
+                                csf_coefficients,
+                                csfs,
+                                CI_coefficients,
+                                pretext,
+                            )
+
                     if "$csfs" in line:
                         found_csf = True
                         new_csf = True
@@ -123,20 +136,31 @@ class SelectedCI:
                             summand_counter += 1
                             if summand_counter == n_summands:
                                 new_csf = True
-                                csf_coefficients.append(
-                                    csf_coefficient_tmp
-                                )
+                                csf_coefficients.append(csf_coefficient_tmp)
                                 csfs.append(csf_tmp)
                                 csf_coefficient_tmp = []
                                 csf_tmp = []
                                 if csf_counter == n_csfs:
                                     break
+                    if found_det:
+                        det_counter += 1
+                        entries = line.split()
+                        CI_coefficients.append(float(entries[0]))
+                        det = []
+                        for i in range(1, len(entries)):
+                            if i <= n_elec / 2:
+                                det.append(1 * int(entries[i]))
+                            else:
+                                det.append(-1 * int(entries[i]))
+                        csfs.append(det.copy())
+                        if det_counter == n_dets:
+                            break
         except FileNotFoundError:
             if verbose:
                 print(
                     f"File {filename} could not be found \
 to read AMOLQC wavefunction."
-                    )
+                )
         return csf_coefficients, csfs, CI_coefficients, pretext
 
     def parse_csf_energies(
@@ -1052,7 +1076,6 @@ wavefunction {len(csfs_optimized)}"
             CI_coefficients_discarded,
             energies_discarded,
         ) = tmp_scnd
-
 
         # unify all discarded entries and sort
         csf_coefficients_discarded_all += csf_coefficients_discarded

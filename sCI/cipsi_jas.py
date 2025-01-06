@@ -90,6 +90,7 @@ class AddSingles:
             temp.append(det_tmp)
         excited_determinants = temp.copy()
 
+        det_basis = []
         # read wavefunction
         if wftype == "csf":
             csf_coefficients, csfs, CI_coefficients, wfpretext = (
@@ -97,6 +98,12 @@ class AddSingles:
             )
             _, _, det_basis = self.sCI.get_transformation_matrix(
                 csf_coefficients, csfs, CI_coefficients
+            )
+        if wftype == "det":
+            _, det_basis, CI_coefficients, wfpretext = (
+                self.sCI.read_AMOLQC_csfs(
+                    f"{wavefunction_name}.wf", N, wftype="det"
+                )
             )
 
         # sort determinants in basis to amolqc format

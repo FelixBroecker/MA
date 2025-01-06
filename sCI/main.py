@@ -175,15 +175,13 @@ def main():
             side=-1,
             absol=True,
         )
-        print(csf_coefficients)
-        print(csfs)
-        print(CI_coefficients)
         sCI.write_AMOLQC(
             csf_coefficients[:split_at],
             csfs[:split_at],
             CI_coefficients[:split_at],
             pretext=wfpretext,
             file_name=f"{wavefunction_name}_out.wf",
+            wftype=wftype,
         )
 
     elif data["WavefunctionOptions"]["wavefunctionOperation"] == "iterative":
@@ -198,37 +196,35 @@ def main():
 
     elif data["WavefunctionOptions"]["wavefunctionOperation"] == "test":
         # indices, energies = sCI.parse_csf_energies(
-        #    "block1/block_initial_dis_out.wf", 30, verbose=True
+        #   "block1/block_initial_dis_out.wf", 30, verbose=True
         # )
         # print(indices)
         # print(energies)
         # exit()
-        # auto.do_block_iteration(
-        #    1000, "block_initial", iteration_ami, energy_ami=energy_ami
-        # )
+        auto.do_block_iteration(
+            4, "block_initial", iteration_ami, energy_ami=energy_ami
+        )
         # auto.do_final_iteration(
-        #    "it_final",
-        #    "it2",
-        #    500,
-        #    final_ami,
-        #    energy_ami=energy_ami
-        #    )
+        #    "it_final", "it2", 500, final_ami, energy_ami=energy_ami
+        # )
         # reference_determinant = sCI.build_energy_lowest_detetminant(N)
         # last_it = auto.do_selective_iteration(
-        #     1,
-        #     "it2",
-        #     iteration_ami,
-        #     energy_ami,
-        #     reference_determinant,
-        #     [1],
-        #     excitations,
+        #    1,
+        #    "it2",
+        #    iteration_ami,
+        #    energy_ami,
+        #    reference_determinant,
+        #    [1],
+        #    excitations,
         # )
-        auto.do_final_block("final", "block24", final_ami)
+        auto.do_final_block("final", "block4", final_ami)
 
     elif data["WavefunctionOptions"]["wavefunctionOperation"] == "add_singles":
         aS = AddSingles()
         aS.add_singles_det(
             N,
+            S,
+            M_s,
             n_MO,
             orbital_symmetry,
             point_group,

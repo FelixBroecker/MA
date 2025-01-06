@@ -62,6 +62,8 @@ class AddSingles:
     def add_singles_det(
         self,
         N,
+        S,
+        M_s,
         n_MO,
         orbital_symmetry,
         point_group,
@@ -89,6 +91,7 @@ class AddSingles:
             _, det_tmp = self.sCI.sort_determinant(1, det)
             temp.append(det_tmp)
         excited_determinants = temp.copy()
+        print(f"Number of all singles: {len(excited_determinants)}")
 
         det_basis = []
         # read wavefunction
@@ -99,7 +102,7 @@ class AddSingles:
             _, _, det_basis = self.sCI.get_transformation_matrix(
                 csf_coefficients, csfs, CI_coefficients
             )
-        if wftype == "det":
+        elif wftype == "det":
             _, det_basis, CI_coefficients, wfpretext = (
                 self.sCI.read_AMOLQC_csfs(
                     f"{wavefunction_name}.wf", N, wftype="det"
@@ -122,10 +125,23 @@ class AddSingles:
         CI_coefficients = [
             1 if n == 0 else 0 for n in range(len(all_determinants))
         ]
+        determinant_representation = all_determinants
+
+        csf_coefficients = []
+        # form csfs from determinant basis if required
+        if wftype == "csf":
+            csf_coefficients, csfs = self.sCI.get_unique_csfs(
+                all_determinants, S, M_s
+            )
+            csf_coefficients, csfs = self.sCI.sort_determinants_in_csfs(
+                csf_coefficients, csfs
+            )
+            CI_coefficients = [1 if n == 0 else 0 for n in range(len(csfs))]
+            determinant_representation = csfs
 
         self.sCI.write_AMOLQC(
-            [],
-            all_determinants,
+            csf_coefficients,
+            determinant_representation,
             CI_coefficients,
             pretext=wfpretext,
             file_name=f"{wavefunction_name}_add_sgls.wf",

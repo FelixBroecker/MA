@@ -127,7 +127,7 @@ class SelectedCI:
                         else:
                             det = []
                             for i in range(1, len(entries)):
-                                if i <= n_elec / 2:
+                                if i <= n_elec // 2:
                                     det.append(1 * int(entries[i]))
                                 else:
                                     det.append(-1 * int(entries[i]))
@@ -148,7 +148,7 @@ class SelectedCI:
                         CI_coefficients.append(float(entries[0]))
                         det = []
                         for i in range(1, len(entries)):
-                            if i <= n_elec / 2:
+                            if i <= n_elec // 2:
                                 det.append(1 * int(entries[i]))
                             else:
                                 det.append(-1 * int(entries[i]))
@@ -1327,7 +1327,6 @@ is going to be generated for this selection."
                 sort_by_idx=True,
                 verbose=True,
             )
-
         # read residual CSFs and energies.
         (
             csf_coefficients_residual,

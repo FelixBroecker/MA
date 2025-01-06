@@ -201,10 +201,10 @@ def main():
         # print(indices)
         # print(energies)
         # exit()
-        #auto.do_block_iteration(
+        # auto.do_block_iteration(
         #    1000, "block_initial", iteration_ami, energy_ami=energy_ami
-        #)
-        #auto.do_final_iteration(
+        # )
+        # auto.do_final_iteration(
         #    "it_final",
         #    "it2",
         #    500,
@@ -225,9 +225,16 @@ def main():
 
     elif data["WavefunctionOptions"]["wavefunctionOperation"] == "add_singles":
         aS = AddSingles()
-        aS.add_singles_det(N, n_MO, orbital_symmetry, point_group,
-                           frozen_electrons, frozen_MOs, wavefunction_name,
-                           "det")
+        aS.add_singles_det(
+            N,
+            n_MO,
+            orbital_symmetry,
+            point_group,
+            frozen_electrons,
+            frozen_MOs,
+            wavefunction_name,
+            "det",
+        )
         exit()
 
         initial_determinant = sCI.build_energy_lowest_detetminant(N)
@@ -290,9 +297,7 @@ def main():
 
         # get csfs from determinant basis and print wavefunction.
         # create guess for CI coefficients
-        csf_coefficients, csfs = sCI.get_unique_csfs(
-            determinants, S, M_s
-        )
+        csf_coefficients, csfs = sCI.get_unique_csfs(determinants, S, M_s)
         csf_coefficients, csfs = sCI.sort_determinants_in_csfs(
             csf_coefficients, csfs
         )

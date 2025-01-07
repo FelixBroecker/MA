@@ -1139,7 +1139,7 @@ wavefunction {len(csfs_optimized)}"
                 excitation_input.append(determinant_basis_selected[i])
 
         # do exitations from selected determinants. only excite electrons that
-        # have not yet been excited in respect to the reference determinant
+        # have not yet been excited with respect to the reference determinant
         # (initial input determinant)
         excited_determinants = []
         for det in excitation_input:

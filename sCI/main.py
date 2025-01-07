@@ -50,7 +50,7 @@ def main():
             "frozenMOs": [],
             "splitAt": 0,
             "maxCsfs": 1500,
-            "wfType": "csfs",
+            "wfType": "csf",
         },
         "Output": {
             "plotCICoefficients": False,
@@ -175,6 +175,7 @@ def main():
             side=-1,
             absol=True,
         )
+        print(csfs[:split_at])
         sCI.write_AMOLQC(
             csf_coefficients[:split_at],
             csfs[:split_at],
@@ -201,9 +202,9 @@ def main():
         # print(indices)
         # print(energies)
         # exit()
-        auto.do_block_iteration(
-            4, "block_initial", iteration_ami, energy_ami=energy_ami
-        )
+        # auto.do_block_iteration(
+        #    4, "block_initial", iteration_ami, energy_ami=energy_ami
+        # )
         # auto.do_final_iteration(
         #    "it_final", "it2", 500, final_ami, energy_ami=energy_ami
         # )
@@ -217,7 +218,30 @@ def main():
         #    [1],
         #    excitations,
         # )
-        auto.do_final_block("final", "block4", final_ami)
+        auto.do_final_block("final", "block3", final_ami)
+
+    elif data["WavefunctionOptions"]["wavefunctionOperation"] == "exc":
+        reference_determinant = sCI.build_energy_lowest_detetminant(N)
+        sCI.select_and_do_excitations(
+            N,
+            n_MO,
+            S,
+            M_s,
+            reference_determinant,
+            excitations,
+            [1],
+            orbital_symmetry,
+            point_group,
+            frozen_electrons,
+            frozen_MOs,
+            wavefunction_name,
+            f"{wavefunction_name}_dis",
+            criterion,
+            threshold,
+            max_csfs,
+            threshold_type=threshold_type,
+            verbose=True,
+        )
 
     elif data["WavefunctionOptions"]["wavefunctionOperation"] == "add_singles":
         aS = AddSingles()

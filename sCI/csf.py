@@ -453,9 +453,9 @@ to parse CSF energy contributions."
             # cut off csfs below threshold
             for i, coeff in enumerate(sorted_ref_list):
                 if absol:
-                    lower = abs(coeff) < thresh
+                    lower = abs(coeff) <= thresh
                 else:
-                    lower = coeff < thresh
+                    lower = coeff <= thresh
                 if lower:
                     cut_off = True
                     i_cut = i
@@ -494,7 +494,7 @@ to parse CSF energy contributions."
                 second_parts.append(lst[i_cut:])
         else:
             first_parts = sorted_list_of_lists
-            second_parts = [[] for _ in len(first_parts)]
+            second_parts = [[] for _ in range(len(first_parts))]
         return first_parts, second_parts
 
     def build_energy_lowest_detetminant(self, n_elecs):

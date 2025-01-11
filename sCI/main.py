@@ -175,7 +175,20 @@ def main():
             side=-1,
             absol=True,
         )
-        print(csfs[:split_at])
+        if wftype == "csf":
+            n_dets = len(csfs[:split_at])
+             # form csfs of these determinants
+            csf_coefficients, csfs = sCI.get_unique_csfs(
+                csfs[:split_at], S, M_s
+            )
+            csf_coefficients, csfs = sCI.sort_determinants_in_csfs(
+                csf_coefficients, csfs
+            )
+            CI_coefficients = [
+                1 if n == 0 else 0 for n in range(len(csfs))
+            ]
+            print(f"number of csfs generated from {n_dets} determinants is \
+{len(csfs)}.")
         sCI.write_AMOLQC(
             csf_coefficients[:split_at],
             csfs[:split_at],
@@ -221,6 +234,25 @@ def main():
         auto.do_final_block("final", "block3", final_ami)
 
     elif data["WavefunctionOptions"]["wavefunctionOperation"] == "exc":
+        # read wf and cut by split_at
+        csf_coefficients, csfs, CI_coefficients, wfpretext = (
+            sCI.read_AMOLQC_csfs(f"{wavefunction_name}.wf", N)
+        )
+        csf_coefficients, csfs, CI_coefficients = sCI.sort_lists_by_list(
+            [csf_coefficients, csfs, CI_coefficients],
+            CI_coefficients,
+            side=-1,
+            absol=True,
+        )
+        CI_coefficients = [n for n in range(len(csfs), 0, -1)]
+        sCI.write_AMOLQC(
+            csf_coefficients[:split_at],
+            csfs[:split_at],
+            CI_coefficients[:split_at],
+            pretext=wfpretext,
+            file_name=f"mod.wf",
+            wftype=wftype,
+        )
         reference_determinant = sCI.build_energy_lowest_detetminant(N)
         sCI.select_and_do_excitations(
             N,
@@ -234,8 +266,8 @@ def main():
             point_group,
             frozen_electrons,
             frozen_MOs,
-            wavefunction_name,
-            f"{wavefunction_name}_dis",
+            "mod",
+            f"_",
             criterion,
             threshold,
             max_csfs,

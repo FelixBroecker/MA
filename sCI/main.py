@@ -175,7 +175,8 @@ def main():
             side=-1,
             absol=True,
         )
-        if wftype == "csf":
+
+        if wftype == "csf" and not csf_coefficients:
             n_dets = len(csfs[:split_at])
              # form csfs of these determinants
             csf_coefficients, csfs = sCI.get_unique_csfs(

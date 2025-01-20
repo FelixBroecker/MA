@@ -163,6 +163,23 @@ def main():
             final_ami,
             energy_ami=energy_ami,
         )
+    elif data["WavefunctionOptions"]["wavefunctionOperation"] == "det2csf":
+        csf_coefficients, csfs, CI_coefficients, wfpretext = (
+            sCI.read_AMOLQC_csfs(f"{wavefunction_name}.wf", N)
+        )
+        CI_coefficients, _, dets = sCI.get_transformation_matrix(
+            csf_coefficients, csfs, CI_coefficients
+        )
+        CI_coefficients = np.diagonal(CI_coefficients)
+        csf_coefficients = []
+        sCI.write_AMOLQC(
+            csf_coefficients,
+            dets,
+            CI_coefficients,
+            pretext=wfpretext,
+            file_name=f"{wavefunction_name}_out.wf",
+            wftype=wftype,
+        )
 
     elif data["WavefunctionOptions"]["wavefunctionOperation"] == "cut":
         # read wf and cut by split_at
@@ -178,18 +195,18 @@ def main():
 
         if wftype == "csf" and not csf_coefficients:
             n_dets = len(csfs[:split_at])
-             # form csfs of these determinants
+            # form csfs of these determinants
             csf_coefficients, csfs = sCI.get_unique_csfs(
                 csfs[:split_at], S, M_s
             )
             csf_coefficients, csfs = sCI.sort_determinants_in_csfs(
                 csf_coefficients, csfs
             )
-            CI_coefficients = [
-                1 if n == 0 else 0 for n in range(len(csfs))
-            ]
-            print(f"number of csfs generated from {n_dets} determinants is \
-{len(csfs)}.")
+            CI_coefficients = [1 if n == 0 else 0 for n in range(len(csfs))]
+            print(
+                f"number of csfs generated from {n_dets} determinants is \
+{len(csfs)}."
+            )
         sCI.write_AMOLQC(
             csf_coefficients[:split_at],
             csfs[:split_at],

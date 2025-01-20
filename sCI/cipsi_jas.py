@@ -91,10 +91,12 @@ class AddSingles:
             _, det_tmp = self.sCI.sort_determinant(1, det)
             temp.append(det_tmp)
         excited_determinants = temp.copy()
-        print(f"Number of all singles in determinants: {len(excited_determinants)}")
+        print(
+            f"Number of all singles in determinants: {len(excited_determinants)}"
+        )
         _, csfs_singles = self.sCI.get_unique_csfs(
-                excited_determinants, S, M_s
-            )
+            excited_determinants.copy(), S, M_s
+        )
         print(f"Number of all singles in csfs: {len(csfs_singles)}")
 
         det_basis = []

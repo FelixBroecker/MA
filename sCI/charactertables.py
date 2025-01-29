@@ -37,7 +37,7 @@ class CharacterTable:
         g = [int(i.split(" ")[0]) for i in self.operations]
         contributions = []
         for label, charac in self.characters.items():
-            contribution = int(
+            contribution = float(
                 sum(
                     [
                         g[i] * representation[i] * char
@@ -48,6 +48,18 @@ class CharacterTable:
             )
             contributions.append(contribution)
         return contributions, list(self.characters.keys())
+
+    def get_dimension(self, label: str):
+        """Return dimension of inserted mulliken label"""
+        dimensions = {
+            "A": 1,
+            "B": 1,
+            "E": 2,
+            "T": 3,
+            "G": 4,
+            "H": 5,
+        }
+        return dimensions[list(label)[0]]
 
     def character2label(self, character):
         """translate character to mulliken label of character table"""
@@ -78,8 +90,12 @@ class CharacterTable:
         self.operations = [
             "1 E",
             "1 C2_z",
-            "1 sv_xz",
-            "1 sv_yz",
+            "1 C2_y",
+            "1 C2_x",
+            "1 i",
+            "1 s_xy",
+            "1 s_xz",
+            "1 s_yz",
         ]
         self.characters = {
             "Ag": [1, 1, 1, 1, 1, 1, 1, 1],
@@ -219,3 +235,5 @@ if __name__ == "__main__":
     )
     print(res)
     print(f"reduction: {symmetry.get_reduction([2, 0, 0, 2])}")
+
+    symmetry = CharacterTable("d2h")

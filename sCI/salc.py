@@ -1,4 +1,5 @@
 import numpy as np
+import re
 from charactertables import CharacterTable
 
 
@@ -94,13 +95,14 @@ class SALC:
         contributions, mulliken_labels = self.characTab.get_reduction(
             self.spanned_basis[orbital]
         )
-        print(mulliken_labels)
         px_basis = self.orbital_basis[orbital]
         order = self.characTab.order
+
+        mulliken_label_res = []
+        projection_res = []
         # get symmetry adapted basis with projection operator
         for contribution, label in zip(contributions, mulliken_labels):
             if contribution != 0:
-                print(label)
                 dim = self.characTab.get_dimension(label)
                 counter = 0
                 tmp = [np.array([0, 0]), np.array([0, 0])]
@@ -115,10 +117,74 @@ class SALC:
                     # print(np.dot(matrix, px_basis)*self.characTab.characters[label][counter])
                     # print(operation)
                     counter += 1
-                print(dim / order * tmp)
+
+                projection = dim / order * tmp
+                if not np.all(projection == 0):
+                    mulliken_label_res.append(label)
+                    projection_res.append(projection)
+        return mulliken_label_res, projection_res
+
+    def get_salcs(self):
+        """"""
+        orb_idx = {}
+        orb_xyz = []
+        # count number of different orbitals and save indices
+        for i, orb in enumerate(self.basis):
+            ao = orb.split("_")[-1]
+            if ao not in orb_idx:
+                orb_idx[ao] = []
+            orb_idx[ao].append(i)
+
+            # get the different orbital species in terms of angular momentum l
+            orb_species = re.search(r"\d+(\D+)", ao).group(1)
+            if orb_species not in orb_xyz:
+                orb_xyz.append(orb_species)
+        proj_results = {}
+        for orb in orb_xyz:
+            lab, op = salc.get_symmetry_adapted_basis(orb)
+            for l, o in zip(lab, op):
+                if l not in proj_results:
+                    proj_results[l] = {
+                        "labels": [],
+                        "operations": [],
+                    }
+                proj_results[l]["labels"].append(orb)
+                proj_results[l]["operations"].append(o)
+        print(orb_idx)
+        print(orb_xyz)
+        print(proj_results)
+        # construct for each reducible representation the salcs as
+        # linear combination
+        for label, data in proj_results.items():
+            proj_results[label] = {"salcs": []}
+            print(label)
+            print(data)
+
+            for orb, idx in orb_idx.items():
+                print(orb)
+                for l in data["labels"]:
+                    if l in orb:
+                        print("flush")
+            exit()
 
 
-salc = SALC("d2h", ["px"])
+salc = SALC(
+    "d2h",
+    [
+        "C1_1s",
+        "C1_2s",
+        "C1_2px",
+        "C1_2py",
+        "C1_2pz",
+        "C2_1s",
+        "C2_2s",
+        "C2_2px",
+        "C2_2py",
+        "C2_2pz",
+    ],
+)
+salc.get_salcs()
+exit()
 print("2s")
 salc.get_symmetry_adapted_basis("s")
 print()

@@ -1,5 +1,6 @@
 import numpy as np
 import re
+import yaml
 from charactertables import CharacterTable
 
 
@@ -12,6 +13,7 @@ class SALC:
         self.operation_matrices: dict[str, list] = {}
         self.spanned_basis: dict[str, list] = {}
         self.orbital_basis: dict[str, list] = {}
+        self.proj_results = {}
         self.get_operations()
 
     def get_operations(self):
@@ -139,33 +141,77 @@ class SALC:
             orb_species = re.search(r"\d+(\D+)", ao).group(1)
             if orb_species not in orb_xyz:
                 orb_xyz.append(orb_species)
-        proj_results = {}
+
         for orb in orb_xyz:
             lab, op = salc.get_symmetry_adapted_basis(orb)
             for l, o in zip(lab, op):
-                if l not in proj_results:
-                    proj_results[l] = {
+                if l not in self.proj_results:
+                    self.proj_results[l] = {
                         "labels": [],
                         "operations": [],
                     }
-                proj_results[l]["labels"].append(orb)
-                proj_results[l]["operations"].append(o)
-        print(orb_idx)
-        print(orb_xyz)
-        print(proj_results)
+                self.proj_results[l]["labels"].append(orb)
+                self.proj_results[l]["operations"].append(o)
+
         # construct for each reducible representation the salcs as
         # linear combination
-        for label, data in proj_results.items():
-            proj_results[label] = {"salcs": []}
-            print(label)
-            print(data)
-
+        lst = [0 for _ in self.basis]
+        for mulliken, data in self.proj_results.items():
+            summands = []
             for orb, idx in orb_idx.items():
-                print(orb)
-                for l in data["labels"]:
-                    if l in orb:
-                        print("flush")
-            exit()
+                for label, operation in zip(
+                    data["labels"], data["operations"]
+                ):
+                    if label in orb:
+                        tmp = lst.copy()
+                        # assign linear combinations to the orbitals to
+                        # the input orbital list
+                        for j, id in enumerate(idx):
+                            tmp[id] = np.sign(operation[0][j])
+                        summands.append(np.array(tmp))
+            self.proj_results[mulliken]["salcs"] = self.generate_combinations(
+                summands
+            )
+
+    def generate_combinations(self, vectors):
+        """generate all linear combinations of list of vectors"""
+        signs = [-1, 1]  # Possible signs
+        num_vectors = len(vectors)
+        combinations = []
+
+        # Generate all combinations using only + and -
+        for i in range(2**num_vectors):  # 2^n combinations
+            combination = np.zeros_like(vectors[0])
+            for j in range(num_vectors):
+                # Use bitwise operations to decide + or - for each vector
+                sign = signs[(i >> j) & 1]
+                combination += sign * vectors[j]
+            combinations.append(combination)
+
+        return combinations
+
+    def assign_mo_coefficients(self, mos):
+        """Assigns the molecular orbital coefficients to the generated SALCs
+        with respect to the signs"""
+        symmetries = ["" for _ in mos]
+        for i, mo in enumerate(mos):
+            for mul, data in self.proj_results.items():
+                if not symmetries[i]:
+                    for salc in data["salcs"]:
+                        same = np.all(np.sign(mo) == np.sign(salc))
+                        if same:
+                            symmetries[i] = mul
+                            break
+        print(symmetries)
+
+
+# parse MO coefficients
+with open(
+    "/home/broecker/research/molecules/c2/pbe0/sto-3g/orca.yaml", "r"
+) as file:
+    data = yaml.safe_load(file)
+
+mos = data["molecularOrbitals"]["coefficients"].values()
 
 
 salc = SALC(
@@ -183,16 +229,6 @@ salc = SALC(
         "C2_2pz",
     ],
 )
+
 salc.get_salcs()
-exit()
-print("2s")
-salc.get_symmetry_adapted_basis("s")
-print()
-print("2px")
-salc.get_symmetry_adapted_basis("px")
-print()
-print("2py")
-salc.get_symmetry_adapted_basis("py")
-print()
-print("2pz")
-salc.get_symmetry_adapted_basis("pz")
+salc.assign_mo_coefficients(mos)

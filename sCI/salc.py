@@ -49,7 +49,7 @@ class SALC:
             "1 s_xz": np.array([[1, 0], [0, 1]]),
             "1 s_yz": np.array([[-1, 0], [0, -1]]),
         }
-        px_reducable_basis = [2, 0, 0, 0, 0, 0, 2, 0]
+        px_reducable_basis = [2, -2, 0, 0, 0, 0, 2, -2]
         px_orbital_basis = [np.array([1, 0]), np.array([0, 1])]
 
         py_orbs = {
@@ -62,7 +62,7 @@ class SALC:
             "1 s_xz": np.array([[-1, 0], [0, -1]]),
             "1 s_yz": np.array([[1, 0], [0, 1]]),
         }
-        py_reducable_basis = [2, 0, 0, 0, 0, 0, 0, 2]
+        py_reducable_basis = [2, -2, 0, 0, 0, 0, -2, 2]
         py_orbital_basis = [np.array([1, 0]), np.array([0, 1])]
 
         pz_orbs = {
@@ -141,9 +141,11 @@ class SALC:
             orb_species = re.search(r"\d+(\D+)", ao).group(1)
             if orb_species not in orb_xyz:
                 orb_xyz.append(orb_species)
-
         for orb in orb_xyz:
             lab, op = salc.get_symmetry_adapted_basis(orb)
+            print(op)
+            print(lab)
+            exit()
             for l, o in zip(lab, op):
                 if l not in self.proj_results:
                     self.proj_results[l] = {
@@ -152,7 +154,6 @@ class SALC:
                     }
                 self.proj_results[l]["labels"].append(orb)
                 self.proj_results[l]["operations"].append(o)
-
         # construct for each reducible representation the salcs as
         # linear combination
         lst = [0 for _ in self.basis]
@@ -205,18 +206,12 @@ class SALC:
         print(symmetries)
 
 
-# parse MO coefficients
-with open(
-    "/home/broecker/research/molecules/c2/pbe0/sto-3g/orca.yaml", "r"
-) as file:
-    data = yaml.safe_load(file)
-
-mos = data["molecularOrbitals"]["coefficients"].values()
-
-
-salc = SALC(
-    "d2h",
-    [
+data_set = "c2_sz"
+if data_set == "c2_sz":
+    # C2 in minimal basis
+    path = "/home/broecker/research/molecules/c2/pbe0/sto-3g/orca.yaml"
+    point_group = "d2h"
+    orbital_basis = [
         "C1_1s",
         "C1_2s",
         "C1_2px",
@@ -227,8 +222,125 @@ salc = SALC(
         "C2_2px",
         "C2_2py",
         "C2_2pz",
-    ],
+    ]
+    orca_reference = [
+        'Ag',
+        'B1u',
+        'Ag',
+        'B1u',
+        'B3u',
+        'B2u',
+        'Ag',
+        'B2g',
+        'B3g',
+        'B1u'
+        ]
+elif data_set == "c2_dz":
+    # C2 in double zeta
+    path = "/home/broecker/research/molecules/c2/pbe0/dzae/orca.yaml"
+    point_group = "d2h"
+    orbital_basis = [
+       "C1_1s1",
+       "C1_2s1",
+       "C1_1s2",
+       "C1_2s2",
+       "C1_2px1",
+       "C1_2py1",
+       "C1_2pz1",
+       "C1_2px2",
+       "C1_2py2",
+       "C1_2pz2",
+       "C2_1s1",
+       "C2_2s1",
+       "C2_1s2",
+       "C2_2s2",
+       "C2_2px1",
+       "C2_2py1",
+       "C2_2pz1",
+       "C2_2px2",
+       "C2_2py2",
+       "C2_2pz2",
+    ]
+    orca_reference = [
+        'Ag',
+        'B1u',
+        'Ag',
+        'B1u',
+        'B2u',
+        'B3u',
+        'Ag',
+        'B2g',
+        'B3g',
+        'B1u',
+        'Ag',
+        'B2u',
+        'B3u',
+        'Ag',
+        'B2g',
+        'B3g',
+        'B1u',
+        'B1u',
+        'Ag',
+        'B1u'
+        ]
+    path = "/home/broecker/research/molecules/c2/pbe0/tzpae/orca.yaml"
+    point_group = "d2h"
+    orbital_basis = []
+elif data_set == "c2_tz":
+    orca_reference = [
+        'Ag',
+        'B1u',
+        'Ag',
+        'B1u',
+        'B2u',
+        'B3u',
+        'Ag',
+        'B3g',
+        'B2g',
+        'B1u',
+        'B2u',
+        'B3u',
+        'Ag',
+        'B3g',
+        'B2g',
+        'Ag',
+        'B1u',
+        'B1u',
+        'B1g',
+        'Ag',
+        'B2u',
+        'B3u',
+        'Ag',
+        'Au',
+        'B1u',
+        'B3u',
+        'B2u',
+        'B3g',
+        'B2g',
+        'B1u',
+        'B2g',
+        'B3g',
+        'Ag',
+        'B1u',
+        'Ag',
+        'B1u',
+        'Ag',
+        'B1u'
+        ]
+
+# parse MO coefficients
+with open(path, "r") as file:
+    data = yaml.safe_load(file)
+
+mos = data["molecularOrbitals"]["coefficients"].values()
+
+
+salc = SALC(
+    "d2h",
+    orbital_basis,
 )
 
 salc.get_salcs()
 salc.assign_mo_coefficients(mos)
+print("Orca reference:")
+print(orca_reference)

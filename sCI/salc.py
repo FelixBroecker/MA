@@ -13,6 +13,7 @@ class SALC:
         self.operation_matrices: dict[str, list] = {}
         self.spanned_basis: dict[str, list] = {}
         self.orbital_basis: dict[str, list] = {}
+        self.orbital_basisfunctions: dict[str, list] = {}
         self.proj_results = {}
         self.get_operations()
 
@@ -26,6 +27,7 @@ class SALC:
     def load_d2h_matrices(self):
         """load the opertion matrices for linear diatomics for
         s, px, py, pz orbitals."""
+
         s_orbs = {
             "1 E": np.array([[1, 0], [0, 1]]),
             "1 C2_z": np.array([[1, 0], [0, 1]]),
@@ -36,8 +38,8 @@ class SALC:
             "1 s_xz": np.array([[1, 0], [0, 1]]),
             "1 s_yz": np.array([[1, 0], [0, 1]]),
         }
-        s_reducable_basis = [2, 2, 0, 0, 0, 0, 2, 2]
         s_orbital_basis = [np.array([1, 0]), np.array([0, 1])]
+        s_reducable_basis = [2, 2, 0, 0, 0, 0, 2, 2]
 
         px_orbs = {
             "1 E":    np.array([
@@ -106,18 +108,18 @@ class SALC:
                 ]),
         }
 
-        px_orbs = {
-            "1 E": np.array([[1, 0], [0, 1]]),
-            "1 C2_z": np.array([[-1, 0], [0, -1]]),
-            "1 C2_y": np.array([[0, -1], [-1, 0]]),
-            "1 C2_x": np.array([[0, 1], [1, 0]]),
-            "1 i": np.array([[0, -1], [-1, 0]]),
-            "1 s_xy": np.array([[0, 1], [1, 0]]),
-            "1 s_xz": np.array([[1, 0], [0, 1]]),
-            "1 s_yz": np.array([[-1, 0], [0, -1]]),
-        }
+        # px_orbs = {
+        #     "1 E": np.array([[1, 0], [0, 1]]),
+        #     "1 C2_z": np.array([[-1, 0], [0, -1]]),
+        #     "1 C2_y": np.array([[0, -1], [-1, 0]]),
+        #     "1 C2_x": np.array([[0, 1], [1, 0]]),
+        #     "1 i": np.array([[0, -1], [-1, 0]]),
+        #     "1 s_xy": np.array([[0, 1], [1, 0]]),
+        #     "1 s_xz": np.array([[1, 0], [0, 1]]),
+        #     "1 s_yz": np.array([[-1, 0], [0, -1]]),
+        # }
+        # px_orbital_basis = [np.array([1, 0]), np.array([0, 1])]
         px_reducable_basis = [2, -2, 0, 0, 0, 0, 2, -2]
-        px_orbital_basis = [np.array([1, 0]), np.array([0, 1])]
 
         py_orbs = {
             "1 E":    np.array([
@@ -185,18 +187,19 @@ class SALC:
                 [0, 0, 0, 0, 0, 0],
                 ]),
         }
-        py_orbs = {
-            "1 E": np.array([[1, 0], [0, 1]]),
-            "1 C2_z": np.array([[-1, 0], [0, -1]]),
-            "1 C2_y": np.array([[0, 1], [1, 0]]),
-            "1 C2_x": np.array([[0, -1], [-1, 0]]),
-            "1 i": np.array([[0, -1], [-1, 0]]),
-            "1 s_xy": np.array([[0, 1], [1, 0]]),
-            "1 s_xz": np.array([[-1, 0], [0, -1]]),
-            "1 s_yz": np.array([[1, 0], [0, 1]]),
-        }
+
+        # py_orbs = {
+        #     "1 E": np.array([[1, 0], [0, 1]]),
+        #     "1 C2_z": np.array([[-1, 0], [0, -1]]),
+        #     "1 C2_y": np.array([[0, 1], [1, 0]]),
+        #     "1 C2_x": np.array([[0, -1], [-1, 0]]),
+        #     "1 i": np.array([[0, -1], [-1, 0]]),
+        #     "1 s_xy": np.array([[0, 1], [1, 0]]),
+        #     "1 s_xz": np.array([[-1, 0], [0, -1]]),
+        #     "1 s_yz": np.array([[1, 0], [0, 1]]),
+        # }
+        # py_orbital_basis = [np.array([1, 0]), np.array([0, 1])]
         py_reducable_basis = [2, -2, 0, 0, 0, 0, -2, 2]
-        py_orbital_basis = [np.array([1, 0]), np.array([0, 1])]
 
         pz_orbs = {
             "1 E":    np.array([
@@ -210,18 +213,18 @@ class SALC:
             "1 C2_z":  np.array([
                 [0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0],
-                [0, 0, -1, 0, 0, 0],
+                [0, 0, 1, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, -1],
+                [0, 0, 0, 0, 0, 1],
                 ]),
             "1 C2_y":  np.array([
                 [0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 1],
+                [0, 0, 0, 0, 0, -1],
                 [0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0],
-                [0, 0, 1, 0, 0, 0],
+                [0, 0, -1, 0, 0, 0],
                 ]),
             "1 C2_x":  np.array([
                 [0, 0, 0, 0, 0, 0],
@@ -265,18 +268,27 @@ class SALC:
                 ]),
         }
 
-        pz_orbs = {
-            "1 E": np.array([[1, 0], [0, 1]]),
-            "1 C2_z": np.array([[1, 0], [0, 1]]),
-            "1 C2_y": np.array([[0, -1], [-1, 0]]),
-            "1 C2_x": np.array([[0, -1], [-1, 0]]),
-            "1 i": np.array([[0, -1], [-1, 0]]),
-            "1 s_xy": np.array([[0, -1], [-1, 0]]),
-            "1 s_xz": np.array([[1, 0], [0, 1]]),
-            "1 s_yz": np.array([[1, 0], [0, 1]]),
-        }
+        p_orbital_basis = [
+            np.array([1, 0, 0, 0, 0, 0]),
+            np.array([0, 1, 0, 0, 0, 0]),
+            np.array([0, 0, 1, 0, 0, 0]),
+            np.array([0, 0, 0, 1, 0, 0]),
+            np.array([0, 0, 0, 0, 1, 0]),
+            np.array([0, 0, 0, 0, 0, 1]),
+            ]
+
+        # pz_orbs = {
+        #     "1 E": np.array([[1, 0], [0, 1]]),
+        #     "1 C2_z": np.array([[1, 0], [0, 1]]),
+        #     "1 C2_y": np.array([[0, -1], [-1, 0]]),
+        #     "1 C2_x": np.array([[0, -1], [-1, 0]]),
+        #     "1 i": np.array([[0, -1], [-1, 0]]),
+        #     "1 s_xy": np.array([[0, -1], [-1, 0]]),
+        #     "1 s_xz": np.array([[1, 0], [0, 1]]),
+        #     "1 s_yz": np.array([[1, 0], [0, 1]]),
+        # }
+        # pz_orbital_basis = [np.array([1, 0]), np.array([0, 1])]
         pz_reducable_basis = [2, 2, 0, 0, 0, 0, 2, 2]
-        pz_orbital_basis = [np.array([1, 0]), np.array([0, 1])]
 
         # load in variable
         self.operation_matrices["s"] = s_orbs
@@ -288,12 +300,23 @@ class SALC:
         self.spanned_basis["py"] = py_reducable_basis
         self.spanned_basis["pz"] = pz_reducable_basis
         self.orbital_basis["s"] = s_orbital_basis
-        self.orbital_basis["px"] = px_orbital_basis
-        self.orbital_basis["py"] = py_orbital_basis
-        self.orbital_basis["pz"] = pz_orbital_basis
+        self.orbital_basis["px"] = p_orbital_basis
+        self.orbital_basis["py"] = p_orbital_basis
+        self.orbital_basis["pz"] = p_orbital_basis
+        self.orbital_basisfunctions = {
+            "s": ["s1", "s2"],
+            "p": [
+                "px1",
+                "py1",
+                "pz1",
+                "px2",
+                "py2",
+                "pz2",
+                ]
+            }
 
 
-    def load_d2h_matrices(self):
+    def load_d4h_matrices(self):
         """load the opertion matrices for linear diatomics for
         s, px, py, pz, dxy, dxz, dyz, dx2-y2, dz2 orbitals."""
 
@@ -357,7 +380,7 @@ class SALC:
         contributions, mulliken_labels = self.characTab.get_reduction(
             self.spanned_basis[orbital]
         )
-        px_basis = self.orbital_basis[orbital]
+        orb_basis = self.orbital_basis[orbital]
         order = self.characTab.order
 
         mulliken_label_res = []
@@ -367,12 +390,12 @@ class SALC:
             if contribution != 0:
                 dim = self.characTab.get_dimension(label)
                 counter = 0
-                tmp = [np.array([0, 0]), np.array([0, 0])]
+                tmp = [np.zeros(len(orb_basis)) for _ in orb_basis]
                 for operation, matrix in self.operation_matrices[
                     orbital
                 ].items():
                     res = (
-                        np.dot(matrix, px_basis)
+                        np.dot(matrix, orb_basis)
                         * self.characTab.characters[label][counter]
                     )
                     tmp += res
@@ -403,9 +426,6 @@ class SALC:
                 orb_xyz.append(orb_species)
         for orb in orb_xyz:
             lab, op = salc.get_symmetry_adapted_basis(orb)
-            print(op)
-            print(lab)
-            exit()
             for l, o in zip(lab, op):
                 if l not in self.proj_results:
                     self.proj_results[l] = {
@@ -416,6 +436,7 @@ class SALC:
                 self.proj_results[l]["operations"].append(o)
         # construct for each reducible representation the salcs as
         # linear combination
+        # TODO write this section more elegant and readable
         lst = [0 for _ in self.basis]
         for mulliken, data in self.proj_results.items():
             summands = []
@@ -424,15 +445,26 @@ class SALC:
                     data["labels"], data["operations"]
                 ):
                     if label in orb:
+                        # check at which postion the orbital is in the basis
+                        for bas in self.orbital_basisfunctions.values():
+                            for i, f in enumerate(bas):
+                                if label in f:
+                                    j = i
+                                    break
                         tmp = lst.copy()
                         # assign linear combinations to the orbitals to
                         # the input orbital list
-                        for j, id in enumerate(idx):
-                            tmp[id] = np.sign(operation[0][j])
+                        ops = []
+                        for i, val in enumerate(operation[j]):
+                            if val:
+                                ops.append(i)
+                        for id, o in zip(idx, ops):
+                            tmp[id] = np.sign(operation[j][o])
                         summands.append(np.array(tmp))
             self.proj_results[mulliken]["salcs"] = self.generate_combinations(
                 summands
             )
+        #print(self.proj_results)
 
     def generate_combinations(self, vectors):
         """generate all linear combinations of list of vectors"""

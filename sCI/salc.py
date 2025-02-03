@@ -427,6 +427,7 @@ class SALC:
                     res = (
                         np.dot(matrix, orb_basis)
                         * self.characTab.characters[label][counter]
+                        * int(operation.split()[0])
                     )
                     tmp += res
                     # print(np.dot(matrix, px_basis)*self.characTab.characters[label][counter])

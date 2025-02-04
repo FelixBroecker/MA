@@ -234,11 +234,11 @@ class SALC:
             "1 i": ["px1 -> -px2", "px2 -> -px1"],
             "2 S4": ["px1 -> +py2", "px2 -> +py1"],
             "1 sh": ["px1 -> +px2", "px2 -> +px1"],
-            "2 sv": ["px1 -> +px1", "px2 -> +px2"],
-            "2 sd": ["px1 -> -px1", "px2 -> -px2"],
+            "2 sv": ["px1 -> -px1", "px2 -> -px2"],
+            "2 sd": ["px1 -> -py1", "px2 -> -py2"],
         }
         orb_empty = np.zeros((len(p_orbital_basis), len(p_orbital_basis)))
-        px_reducable_basis = [2, -2, 0, 0, 0, 0, 2, -2]
+        px_reducable_basis = [2, 0, -2, 0, 0, 0, 0, 0, -2, 2]
         # convert to transformation matrix
         for mulliken, operations in px_orbs.items():
             px_orbs[mulliken] = self.get_transformation_matrix(
@@ -257,7 +257,7 @@ class SALC:
             "2 sv": ["py1 -> -py1", "py2 -> -py2"],
             "2 sd": ["py1 -> -px1", "py2 -> -px2"],
         }
-        py_reducable_basis = [2, -2, 0, 0, 0, 0, -2, 2]
+        py_reducable_basis = [2, 0, -2, 0, 0, 0, 0, 0, 2, -2]
         # convert to transformation matrix
         for mulliken, operations in py_orbs.items():
             py_orbs[mulliken] = self.get_transformation_matrix(
@@ -276,7 +276,7 @@ class SALC:
             "2 sv": ["pz1 -> +pz1", "pz2 -> +pz2"],
             "2 sd": ["pz1 -> +pz1", "pz2 -> +pz2"],
         }
-        pz_reducable_basis = [2, 2, 0, 0, 0, 0, 2, 2]
+        pz_reducable_basis = [2, 2, 2, 0, 0, 0, 0, 0, 2, 2]
         # convert to transformation matrix
         for mulliken, operations in pz_orbs.items():
             pz_orbs[mulliken] = self.get_transformation_matrix(
@@ -286,17 +286,17 @@ class SALC:
         dxy_orbs = {
             "1 E": ["dxy1 -> +dxy1", "dxy2 -> +dxy2"],
             "2 C4_z": ["dxy1 -> -dxy1", "dxy2 -> -dxy2"],
-            "1 C2": ["dxy1 -> -dxy1", "dxy2 -> -dxy2"],
+            "1 C2": ["dxy1 -> +dxy1", "dxy2 -> +dxy2"],
             "2 C2''": ["dxy1 -> -dxy2", "dxy2 -> -dxy1"],
             "2 C2'''": ["dxy1 -> +dxy2", "dxy2 -> +dxy1"],
             "1 i": ["dxy1 -> +dxy2", "dxy2 -> +dxy1"],
             "2 S4": ["dxy1 -> -dxy2", "dxy2 -> -dxy1"],
             "1 sh": ["dxy1 -> +dxy2", "dxy2 -> +dxy1"],
             "2 sv": ["dxy1 -> -dxy1", "dxy2 -> -dxy2"],
-            "2 sd": ["dxy1 -> -dxy1", "dxy2 -> -dxy2"],
+            "2 sd": ["dxy1 -> +dxy1", "dxy2 -> +dxy2"],
         }
         orb_empty = np.zeros((len(d_orbital_basis), len(d_orbital_basis)))
-        dxy_reducable_basis = [2, -2, 2, 0, 0, 0, 0, 0, -2, -2]
+        dxy_reducable_basis = [2, -2, 2, 0, 0, 0, 0, 0, -2, +2]
         # convert to transformation matrix
         for mulliken, operations in dxy_orbs.items():
             dxy_orbs[mulliken] = self.get_transformation_matrix(
@@ -353,7 +353,7 @@ class SALC:
             "2 sv": ["dxxyy1 -> +dxxyy1", "dxxyy2 -> +dxxyy2"],
             "2 sd": ["dxxyy1 -> +dxxyy1", "dxxyy2 -> +dxxyy2"],
         }
-        dxx_yy_reducable_basis = [2, -2, 2, 0, 0, 0, 0, 0, 2, 2]
+        dxx_yy_reducable_basis = [2, -2, 2, 0, 0, 0, 0, 0, 2, -2]
         # convert to transformation matrix
         for mulliken, operations in dxx_yy_orbs.items():
             dxx_yy_orbs[mulliken] = self.get_transformation_matrix(
@@ -398,6 +398,10 @@ class SALC:
         self.spanned_basis["dyz"] = dyz_reducable_basis
         self.spanned_basis["dxxyy"] = dxx_yy_reducable_basis
         self.spanned_basis["dzz"] = dzz_reducable_basis
+        self.orbital_basis["s"] = s_orbital_basis
+        self.orbital_basis["px"] = p_orbital_basis
+        self.orbital_basis["py"] = p_orbital_basis
+        self.orbital_basis["pz"] = p_orbital_basis
         self.orbital_basis["dxy"] = d_orbital_basis
         self.orbital_basis["dxz"] = d_orbital_basis
         self.orbital_basis["dyz"] = d_orbital_basis
@@ -406,10 +410,10 @@ class SALC:
 
     def get_symmetry_adapted_basis(self, orbital):
         """get symmetry adapted basis for the given orbitals"""
+        print(self.spanned_basis[orbital])
         contributions, mulliken_labels = self.characTab.get_reduction(
             self.spanned_basis[orbital]
         )
-
         orb_basis = self.orbital_basis[orbital]
         order = self.characTab.order
 
@@ -474,6 +478,7 @@ class SALC:
         lst = [0 for _ in self.basis]
         for mulliken, data in self.proj_results.items():
             summands = []
+            print(data["operations"])
             for orb, idx in orb_idx.items():
                 for label, operation in zip(
                     data["labels"], data["operations"]
@@ -498,6 +503,13 @@ class SALC:
             self.proj_results[mulliken]["salcs"] = self.generate_combinations(
                 summands
             )
+            print(mulliken)
+            for summa in summands:
+                print(summa)
+                _ = input()
+            print("sum")
+            print(sum(summands))
+            print()
 
     def generate_combinations(self, vectors):
         """generate all linear combinations of list of vectors"""
@@ -523,10 +535,16 @@ class SALC:
         for i, mo in enumerate(mos):
             for mul, data in self.proj_results.items():
                 if not symmetries[i]:
-                    for salc in data["salcs"]:
+                    for j, salc in enumerate(data["salcs"]):
                         same = np.all(np.sign(mo) == np.sign(salc))
                         if same:
                             symmetries[i] = mul
+                            break
+                        if all(
+                            np.sign(a) == np.sign(b) for a, b in zip(mo, res)
+                        ):
+                            print("FOUND")
+                            print()
                             break
         print(symmetries)
 
@@ -695,12 +713,36 @@ else:
     print("Invalid input.")
     exit()
 
+
+data = [[] for _ in orbital_basis]
+
+with open(
+    "/home/broecker/research/molecules/c2/pbe0/tzpae/orca.mkl", "r"
+) as reffile:
+    found = False
+    for line in reffile:
+        if "$END" in line:
+            found = False
+        if "$COEFF_ALPHA" in line:
+            found = True
+            continue
+        if "a1g" in line:
+            counter = 0
+            line = reffile.readline()
+            continue
+        if found:
+            items = line.split()
+            for val in items:
+                data[counter].append(float(val))
+            counter += 1
+transposed = list(map(list, zip(*data)))
+
 # parse MO coefficients
 with open(path, "r") as file:
     data = yaml.safe_load(file)
 
 mos = data["molecularOrbitals"]["coefficients"].values()
-
+mos = transposed
 
 salc = SALC(
     point_group,

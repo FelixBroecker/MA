@@ -18,6 +18,8 @@ class CharacterTable:
             self.c2v()
         if self.point_group == "d4h":
             self.d4h()
+        if self.point_group == "d4h_expanded":
+            self.d4h_expanded()
         if self.point_group == "cs":
             self.cs()
 
@@ -31,12 +33,12 @@ class CharacterTable:
 
     def get_reduction(self, representation: list):
         """"""
-        assert len(representation) == len(
-            self.characters
-        ), "Length of representation does not match with length of characters."
         g = [int(i.split(" ")[0]) for i in self.operations]
         contributions = []
         for label, charac in self.characters.items():
+            assert len(representation) == len(
+                charac
+            ), "Length of representation does not match with length of characters."
             contribution = float(
                 sum(
                     [
@@ -76,12 +78,12 @@ class CharacterTable:
         ]
         self.characters = {"A'": [1, 1], "A''": [1, -1]}
         self.linear_funcs = {
-            "A'": ["x", "y", "Rz"],
+            "1 A'": ["x", "y", "Rz"],
             "A''": ["z", "Rx", "Ry"],
         }
         self.quadratic_funcs = {
-            "A'": ["xx", "yy", "zz", "xy"],
-            "A''": ["yz", "xz"],
+            "1 A'": ["xx", "yy", "zz", "xy"],
+            "1 A''": ["yz", "xz"],
         }
         self.order = 2
 
@@ -135,8 +137,8 @@ class CharacterTable:
             "1 E",
             "2 C4_z",
             "1 C2",
-            "2 C'2",
-            "2 C''2",
+            "2 C2'",
+            "2 C2''",
             "1 i",
             "2 S4",
             "1 sh",
@@ -189,6 +191,57 @@ class CharacterTable:
             "B1u": [],
             "B2u": [],
             "Eu": [],
+        }
+        self.order = 16
+
+    def d4h_expanded(self):
+        """load character table d4h"""
+        self.operations = [
+            "1 E",
+            "1 C4_z+",
+            "1 C4_z-",
+            "1 C2",
+            "1 C2''x",
+            "1 C2''y",
+            "1 C2'''1",
+            "1 C2'''2",
+            "1 i",
+            "1 S4+",
+            "1 S4-",
+            "1 sh",
+            "1 sv'",
+            "1 sv''",
+            "1 sd'",
+            "1 sd''",
+        ]
+        self.characters = {
+            "A1g": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            "A2g": [1, 1, 1, 1, -1, -1, -1, -1, 1, 1, 1, 1, -1, -1, -1, -1],
+            "B1g": [1, -1, -1, 1, 1, 1, -1, -1, 1, -1, -1, 1, 1, 1, -1, -1],
+            "B2g": [1, -1, -1, 1, -1, -1, 1, 1, 1, -1, -1, 1, -1, -1, 1, 1],
+            "Eg": [2, 0, 0, -2, 0, 0, 0, 0, 2, 0, 0, -2, 0, 0, 0, 0],
+            "A1u": [
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+            ],
+            "A2u": [1, 1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1, 1, 1, 1, 1],
+            "B1u": [1, -1, -1, 1, 1, 1, -1, -1, -1, 1, 1, -1, -1, -1, 1, 1],
+            "B2u": [1, -1, -1, 1, -1, -1, 1, 1, -1, 1, 1, -1, 1, 1, -1, -1],
+            "Eu": [2, 0, 0, -2, 0, 0, 0, 0, -2, 0, 0, 2, 0, 0, 0, 0],
         }
         self.order = 16
 

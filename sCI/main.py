@@ -249,7 +249,17 @@ def main():
         #    [1],
         #    excitations,
         # )
-        auto.do_final_block("final", "block3", final_ami)
+        # auto.do_final_block("final", "block3", final_ami)
+        initial_determinant = sCI.build_energy_lowest_detetminant(N)
+        csf_coefficients, csfs, CI_coefficients, wfpretext = (
+            sCI.read_AMOLQC_csfs(f"{wavefunction_name}.wf", N)
+        )
+        res = sCI.determine_excitations(
+            csfs, initial_determinant, wf_type=wftype
+        )
+        with open("excitation.out", "w") as reffile:
+            for item in res:
+                reffile.write(f"{item}\n")
 
     elif data["WavefunctionOptions"]["wavefunctionOperation"] == "exc":
         # read wf and cut by split_at

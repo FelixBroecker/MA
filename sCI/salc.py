@@ -1108,7 +1108,7 @@ else:
 
 data = [[] for _ in orbital_basis]
 
-
+# parse orca mos
 with open(
     "/home/broecker/research/molecules/c2/pbe0/orca/tzpae/orca.mkl", "r"
 ) as reffile:
@@ -1130,12 +1130,40 @@ with open(
             counter += 1
 transposed = list(map(list, zip(*data)))
 
+if cartesian:
+    data = [[] for _ in orbital_basis]
+    # parse gamess mos
+    counter = 0
+    with open(
+        "/home/broecker/research/molecules/c2/pbe0/gamess/gamess.out", "r"
+    ) as reffile:
+        found = False
+        for line in reffile:
+            if "EIGENVECTORS" in line:
+                found = True
+                for _ in range(6):
+                    line = reffile.readline()
+            if "...... END OF RHF CALCULATION ......" in line:
+                found = False
+                break
+            if counter == len(orbital_basis):
+                counter = 0
+                for _ in range(4):
+                    line = reffile.readline()
+            if found:
+                items = line.split()
+                items = items[4:]
+                for val in items:
+                    data[counter].append(float(val))
+                counter += 1
+    transposed = list(map(list, zip(*data)))
+
 # parse MO coefficients
 with open(path, "r") as file:
     data = yaml.safe_load(file)
 
 mos = data["molecularOrbitals"]["coefficients"].values()
-if not cartesian:
+if cartesian:
     mos = transposed
 
 salc = SALC(

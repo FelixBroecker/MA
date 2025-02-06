@@ -5,11 +5,12 @@ from charactertables import CharacterTable
 
 
 class SALC:
-    def __init__(self, point_group: str, basis: list):
+    def __init__(self, point_group: str, basis: list, cartesian: bool = False):
         """"""
         self.point_group = point_group
         self.characTab = CharacterTable(point_group)
         self.basis = basis
+        self.cartesian = cartesian
         self.operation_matrices: dict[str, list] = {}
         self.spanned_basis: dict[str, list] = {}
         self.orbital_basis: dict[str, list] = {}
@@ -185,6 +186,21 @@ class SALC:
                 "dzz2",
             ],
         }
+        if self.cartesian:
+            self.orbital_basisfunctions["d"] = [
+                "dxy1",
+                "dxz1",
+                "dyz1",
+                "dxx1",
+                "dyy1",
+                "dzz1",
+                "dxy2",
+                "dxz2",
+                "dyz2",
+                "dxx2",
+                "dyy2",
+                "dzz2",
+            ]
         s_orbital_basis = [np.array([1, 0]), np.array([0, 1])]
         p_orbital_basis = [
             np.array([1, 0, 0, 0, 0, 0]),
@@ -194,19 +210,10 @@ class SALC:
             np.array([0, 0, 0, 0, 1, 0]),
             np.array([0, 0, 0, 0, 0, 1]),
         ]
+        n_d_orbitals = len(self.orbital_basisfunctions["d"])
         d_orbital_basis = [
-            np.array([1, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
-            np.array([0, 1, 0, 0, 0, 0, 0, 0, 0, 0]),
-            np.array([0, 0, 1, 0, 0, 0, 0, 0, 0, 0]),
-            np.array([0, 0, 0, 1, 0, 0, 0, 0, 0, 0]),
-            np.array([0, 0, 0, 0, 1, 0, 0, 0, 0, 0]),
-            np.array([0, 0, 0, 0, 0, 1, 0, 0, 0, 0]),
-            np.array([0, 0, 0, 0, 0, 0, 1, 0, 0, 0]),
-            np.array([0, 0, 0, 0, 0, 0, 0, 1, 0, 0]),
-            np.array([0, 0, 0, 0, 0, 0, 0, 0, 1, 0]),
-            np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 1]),
+            np.eye(n_d_orbitals)[i] for i in range(n_d_orbitals)
         ]
-
         s_orbs = {
             "1 E": ["s1 -> +s1", "s2 -> +s2"],
             "1 C4_z+": ["s1 -> +s1", "s2 -> +s2"],
@@ -380,11 +387,6 @@ class SALC:
             +2,
             +2,
         ]
-        # convert to transformation matrix
-        for mulliken, operations in dxy_orbs.items():
-            dxy_orbs[mulliken] = self.get_transformation_matrix(
-                operations, "d", orb_empty
-            )
 
         dxz_orbs = {
             "1 E": ["dxz1 -> +dxz1", "dxz2 -> +dxz2"],
@@ -422,11 +424,6 @@ class SALC:
             +2,
             -2,
         ]
-        # convert to transformation matrix
-        for mulliken, operations in dxz_orbs.items():
-            dxz_orbs[mulliken] = self.get_transformation_matrix(
-                operations, "d", orb_empty
-            )
 
         dyz_orbs = {
             "1 E": ["dyz1 -> +dyz1", "dyz2 -> +dyz2"],
@@ -464,11 +461,6 @@ class SALC:
             2,
             2,
         ]
-        # convert to transformation matrix
-        for mulliken, operations in dyz_orbs.items():
-            dyz_orbs[mulliken] = self.get_transformation_matrix(
-                operations, "d", orb_empty
-            )
 
         dxxyy_orbs = {
             "1 E": ["dxxyy1 -> +dxxyy1", "dxxyy2 -> +dxxyy2"],
@@ -506,11 +498,6 @@ class SALC:
             -2,
             -2,
         ]
-        # convert to transformation matrix
-        for mulliken, operations in dxxyy_orbs.items():
-            dxxyy_orbs[mulliken] = self.get_transformation_matrix(
-                operations, "d", orb_empty
-            )
 
         dzz_orbs = {
             "1 E": ["dzz1 -> +dzz1", "dzz2 -> +dzz2"],
@@ -531,11 +518,138 @@ class SALC:
             "1 sd''": ["dzz1 -> +dzz1", "dzz2 -> +dzz2"],
         }
         dzz_reducable_basis = [2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2]
-        # convert to transformation matrix
-        for mulliken, operations in dzz_orbs.items():
-            dzz_orbs[mulliken] = self.get_transformation_matrix(
-                operations, "d", orb_empty
-            )
+
+        dxx_orbs = {
+            "1 E": ["dxx1 -> +dxx1", "dxx2 -> +dxx2"],
+            "1 C4_z+": ["dxx1 -> +dyy1", "dxx2 -> +dyy2"],
+            "1 C4_z-": ["dxx1 -> +dyy1", "dxx2 -> +dyy2"],
+            "1 C2": ["dxx1 -> +dxx1", "dxx2 -> +dxx2"],
+            "1 C2''x": ["dxx1 -> +dxx2", "dxx2 -> +dxx1"],
+            "1 C2''y": ["dxx1 -> +dxx2", "dxx2 -> +dxx1"],
+            "1 C2'''1": ["dxx1 -> +dyy2", "dxx2 -> +dyy1"],
+            "1 C2'''2": ["dxx1 -> +dyy2", "dxx2 -> +dyy1"],
+            "1 i": ["dxx1 -> +dxx2", "dxx2 -> +dxx1"],
+            "1 S4+": ["dxx1 -> +dyy2", "dxx2 -> +dyy1"],
+            "1 S4-": ["dxx1 -> +dyy2", "dxx2 -> +dyy1"],
+            "1 sh": ["dxx1 -> +dxx2", "dxx2 -> +dxx1"],
+            "1 sv'": ["dxx1 -> +dxx1", "dxx2 -> +dxx2"],
+            "1 sv''": ["dxx1 -> +dxx1", "dxx2 -> +dxx2"],
+            "1 sd'": ["dxx1 -> +dyy1", "dxx2 -> +dyy2"],
+            "1 sd''": ["dxx1 -> +dyy1", "dxx2 -> +dyy2"],
+        }
+        dxx_reducable_basis = [
+            2,
+            0,
+            0,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            2,
+            2,
+            0,
+            0,
+        ]
+
+        dyy_orbs = {
+            "1 E": ["dyy1 -> +dyy1", "dyy2 -> +dyy2"],
+            "1 C4_z+": ["dyy1 -> +dxx1", "dyy2 -> +dxx2"],
+            "1 C4_z-": ["dyy1 -> +dxx1", "dyy2 -> +dxx2"],
+            "1 C2": ["dyy1 -> +dyy1", "dyy2 -> +dyy2"],
+            "1 C2''x": ["dyy1 -> +dyy2", "dyy2 -> +dyy1"],
+            "1 C2''y": ["dyy1 -> +dyy2", "dyy2 -> +dyy1"],
+            "1 C2'''1": ["dyy1 -> +dxx2", "dyy2 -> +dxx1"],
+            "1 C2'''2": ["dyy1 -> +dxx2", "dyy2 -> +dxx1"],
+            "1 i": ["dyy1 -> +dyy2", "dyy2 -> +dyy1"],
+            "1 S4+": ["dyy1 -> +dxx2", "dyy2 -> +dxx1"],
+            "1 S4-": ["dyy1 -> +dxx2", "dyy2 -> +dxx1"],
+            "1 sh": ["dyy1 -> +dyy2", "dyy2 -> +dyy1"],
+            "1 sv'": ["dyy1 -> +dyy1", "dyy2 -> +dyy2"],
+            "1 sv''": ["dyy1 -> +dyy1", "dyy2 -> +dyy2"],
+            "1 sd'": ["dyy1 -> +dxx1", "dyy2 -> +dxx2"],
+            "1 sd''": ["dyy1 -> +dxx1", "dyy2 -> +dxx2"],
+        }
+        dyy_reducable_basis = [
+            2,
+            0,
+            0,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            2,
+            2,
+            0,
+            0,
+        ]
+
+        dzz_cart_orbs = {
+            "1 E": ["dzz1 -> +dzz1", "dzz2 -> +dzz2"],
+            "1 C4_z+": ["dzz1 -> +dzz1", "dzz2 -> +dzz2"],
+            "1 C4_z-": ["dzz1 -> +dzz1", "dzz2 -> +dzz2"],
+            "1 C2": ["dzz1 -> +dzz1", "dzz2 -> +dzz2"],
+            "1 C2''x": ["dzz1 -> +dzz2", "dzz2 -> +dzz1"],
+            "1 C2''y": ["dzz1 -> +dzz2", "dzz2 -> +dzz1"],
+            "1 C2'''1": ["dzz1 -> +dzz2", "dzz2 -> +dzz1"],
+            "1 C2'''2": ["dzz1 -> +dzz2", "dzz2 -> +dzz1"],
+            "1 i": ["dzz1 -> +dzz2", "dzz2 -> +dzz1"],
+            "1 S4+": ["dzz1 -> +dzz2", "dzz2 -> +dzz1"],
+            "1 S4-": ["dzz1 -> +dzz2", "dzz2 -> +dzz1"],
+            "1 sh": ["dzz1 -> +dzz2", "dzz2 -> +dzz1"],
+            "1 sv'": ["dzz1 -> +dzz1", "dzz2 -> +dzz2"],
+            "1 sv''": ["dzz1 -> +dzz1", "dzz2 -> +dzz2"],
+            "1 sd'": ["dzz1 -> +dzz1", "dzz2 -> +dzz2"],
+            "1 sd''": ["dzz1 -> +dzz1", "dzz2 -> +dzz2"],
+        }
+        dzz_cart_reducable_basis = [
+            2,
+            2,
+            2,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            2,
+            2,
+            2,
+            2,
+        ]
+        cart_bas = [
+            dyz_orbs,
+            dxz_orbs,
+            dxy_orbs,
+            dxx_orbs,
+            dyy_orbs,
+            dzz_cart_orbs,
+        ]
+        sph_bas = [dyz_orbs, dxz_orbs, dxy_orbs, dxxyy_orbs, dzz_orbs]
+        if self.cartesian:
+            for orbs in cart_bas:
+                for mulliken, operations in orbs.items():
+                    orbs[mulliken] = self.get_transformation_matrix(
+                        operations, "d", orb_empty
+                    )
+        else:
+            for orbs in sph_bas:
+                for mulliken, operations in orbs.items():
+                    orbs[mulliken] = self.get_transformation_matrix(
+                        operations, "d", orb_empty
+                    )
 
         # general information
         self.operation_matrices["s"] = s_orbs
@@ -545,8 +659,13 @@ class SALC:
         self.operation_matrices["dxy"] = dxy_orbs
         self.operation_matrices["dxz"] = dxz_orbs
         self.operation_matrices["dyz"] = dyz_orbs
-        self.operation_matrices["dxxyy"] = dxxyy_orbs
-        self.operation_matrices["dzz"] = dzz_orbs
+        if self.cartesian:
+            self.operation_matrices["dxx"] = dxx_orbs
+            self.operation_matrices["dyy"] = dyy_orbs
+            self.operation_matrices["dzz"] = dzz_cart_orbs
+        else:
+            self.operation_matrices["dxxyy"] = dxxyy_orbs
+            self.operation_matrices["dzz"] = dzz_orbs
         self.spanned_basis["s"] = s_reducable_basis
         self.spanned_basis["px"] = px_reducable_basis
         self.spanned_basis["py"] = py_reducable_basis
@@ -554,8 +673,13 @@ class SALC:
         self.spanned_basis["dxy"] = dxy_reducable_basis
         self.spanned_basis["dxz"] = dxz_reducable_basis
         self.spanned_basis["dyz"] = dyz_reducable_basis
-        self.spanned_basis["dxxyy"] = dxxyy_reducable_basis
-        self.spanned_basis["dzz"] = dzz_reducable_basis
+        if self.cartesian:
+            self.spanned_basis["dxx"] = dxx_reducable_basis
+            self.spanned_basis["dyy"] = dyy_reducable_basis
+            self.spanned_basis["dzz"] = dzz_cart_reducable_basis
+        else:
+            self.spanned_basis["dxxyy"] = dxxyy_reducable_basis
+            self.spanned_basis["dzz"] = dzz_reducable_basis
         self.orbital_basis["s"] = s_orbital_basis
         self.orbital_basis["px"] = p_orbital_basis
         self.orbital_basis["py"] = p_orbital_basis
@@ -563,8 +687,13 @@ class SALC:
         self.orbital_basis["dxy"] = d_orbital_basis
         self.orbital_basis["dxz"] = d_orbital_basis
         self.orbital_basis["dyz"] = d_orbital_basis
-        self.orbital_basis["dxxyy"] = d_orbital_basis
-        self.orbital_basis["dzz"] = d_orbital_basis
+        if self.cartesian:
+            self.orbital_basis["dxx"] = d_orbital_basis
+            self.orbital_basis["dyy"] = d_orbital_basis
+            self.orbital_basis["dzz"] = d_orbital_basis
+        else:
+            self.orbital_basis["dxxyy"] = d_orbital_basis
+            self.orbital_basis["dzz"] = d_orbital_basis
 
     def get_symmetry_adapted_basis(self, orbital):
         """get symmetry adapted basis for the given orbitals"""
@@ -620,7 +749,7 @@ class SALC:
             if orb_species not in orb_xyz:
                 orb_xyz.append(orb_species)
         for orb in orb_xyz:
-            lab, op = salc.get_symmetry_adapted_basis(orb)
+            lab, op = self.get_symmetry_adapted_basis(orb)
             for l, o in zip(lab, op):
                 if l not in self.proj_results:
                     self.proj_results[l] = {
@@ -661,7 +790,16 @@ class SALC:
                         ops = []
                         for i, val in enumerate(operation[j]):
                             if val:
-                                ops.append(i)
+                                # TODO This solution is really not nice
+                                # and should be changed
+                                bas_func = re.search(
+                                    r"([a-zA-Z]+)(\d+)",
+                                    self.orbital_basisfunctions[
+                                        list(label)[0]
+                                    ][i],
+                                ).group(1)
+                                if bas_func in orb:
+                                    ops.append(i)
                         for id, o in zip(idx, ops):
                             tmp[id] = np.sign(operation[j][o])
                         summands.append(np.array(tmp))
@@ -714,6 +852,7 @@ class SALC:
                             symmetries[i] = mul
                             break
         print(symmetries)
+        print(len(symmetries))
 
 
 data_set = "c2_tz"
@@ -796,46 +935,91 @@ elif data_set == "c2_dz":
 elif data_set == "c2_tz":
     path = "/home/broecker/research/molecules/c2/pbe0/orca/tzpae/orca.yaml"
     point_group = "d4h_expanded"
-    orbital_basis = [
-        "C1_1s",
-        "C1_2s",
-        "C1_3s",
-        "C1_4s",
-        "C1_5s",
-        "C1_1px",
-        "C1_1py",
-        "C1_1pz",
-        "C1_2px",
-        "C1_2py",
-        "C1_2pz",
-        "C1_3px",
-        "C1_3py",
-        "C1_3pz",
-        "C1_1dzz",
-        "C1_1dxz",
-        "C1_1dyz",
-        "C1_1dxxyy",
-        "C1_1dxy",
-        "C2_1s",
-        "C2_2s",
-        "C2_3s",
-        "C2_4s",
-        "C2_5s",
-        "C2_1px",
-        "C2_1py",
-        "C2_1pz",
-        "C2_2px",
-        "C2_2py",
-        "C2_2pz",
-        "C2_3px",
-        "C2_3py",
-        "C2_3pz",
-        "C2_1dzz",
-        "C2_1dxz",
-        "C2_1dyz",
-        "C2_1dxxyy",
-        "C2_1dxy",
-    ]
+    cartesian = True
+    if not cartesian:
+        orbital_basis = [
+            "C1_1s",
+            "C1_2s",
+            "C1_3s",
+            "C1_4s",
+            "C1_5s",
+            "C1_1px",
+            "C1_1py",
+            "C1_1pz",
+            "C1_2px",
+            "C1_2py",
+            "C1_2pz",
+            "C1_3px",
+            "C1_3py",
+            "C1_3pz",
+            "C1_1dzz",
+            "C1_1dxz",
+            "C1_1dyz",
+            "C1_1dxxyy",
+            "C1_1dxy",
+            "C2_1s",
+            "C2_2s",
+            "C2_3s",
+            "C2_4s",
+            "C2_5s",
+            "C2_1px",
+            "C2_1py",
+            "C2_1pz",
+            "C2_2px",
+            "C2_2py",
+            "C2_2pz",
+            "C2_3px",
+            "C2_3py",
+            "C2_3pz",
+            "C2_1dzz",
+            "C2_1dxz",
+            "C2_1dyz",
+            "C2_1dxxyy",
+            "C2_1dxy",
+        ]
+    else:
+        orbital_basis = [
+            "C1_1s",
+            "C1_2s",
+            "C1_3s",
+            "C1_4s",
+            "C1_5s",
+            "C1_1px",
+            "C1_1py",
+            "C1_1pz",
+            "C1_2px",
+            "C1_2py",
+            "C1_2pz",
+            "C1_3px",
+            "C1_3py",
+            "C1_3pz",
+            "C1_1dxx",
+            "C1_1dyy",
+            "C1_1dzz",
+            "C1_1dxy",
+            "C1_1dxz",
+            "C1_1dyz",
+            "C2_1s",
+            "C2_2s",
+            "C2_3s",
+            "C2_4s",
+            "C2_5s",
+            "C2_1px",
+            "C2_1py",
+            "C2_1pz",
+            "C2_2px",
+            "C2_2py",
+            "C2_2pz",
+            "C2_3px",
+            "C2_3py",
+            "C2_3pz",
+            "C2_1dxx",
+            "C2_1dyy",
+            "C2_1dzz",
+            "C2_1dxy",
+            "C2_1dxz",
+            "C2_1dyz",
+        ]
     orca_reference = [
         "Ag",
         "B1u",
@@ -922,8 +1106,8 @@ else:
     print("Invalid input.")
     exit()
 
-
 data = [[] for _ in orbital_basis]
+
 
 with open(
     "/home/broecker/research/molecules/c2/pbe0/orca/tzpae/orca.mkl", "r"
@@ -951,18 +1135,22 @@ with open(path, "r") as file:
     data = yaml.safe_load(file)
 
 mos = data["molecularOrbitals"]["coefficients"].values()
-mos = transposed
+if not cartesian:
+    mos = transposed
 
 salc = SALC(
     point_group,
     orbital_basis,
+    cartesian=cartesian,
 )
 
 salc.get_salcs()
 salc.assign_mo_coefficients(mos)
 print("Orca reference:")
 print(orca_reference)
+print(len(orca_reference))
 
 if data_set == "c2_tz":
     print("Gamess reference (cartesian):")
     print(gamess_reference)
+    print(len(gamess_reference))

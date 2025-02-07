@@ -168,11 +168,13 @@ to read AMOLQC wavefunction."
         input_amo: str,
         n_csfs: int,
         sort_by_idx=True,
+        return_err=False,
         verbose=False,
     ):
         """able to read from amo or from wf file"""
         energies = []
         indices = []
+        errors = []
         try:
             with open(f"{input_amo}", "r") as reffile:
                 found = False
@@ -187,7 +189,8 @@ to read AMOLQC wavefunction."
                         items = line.split()
                         indices.append(int(items[0]))
                         energies.append(float(items[1]))
-                    if "  Index  Energy difference" in line:
+                        errors.append(float(items[2]))
+                    if "Index  Energy difference" in line:
                         found = True
                     if "$nrgs" in line:
                         found = True
@@ -195,13 +198,17 @@ to read AMOLQC wavefunction."
                 idx = np.array(indices).argsort()
                 indices = [indices[i] for i in idx]
                 energies = [energies[i] for i in idx]
+                errors = [errors[i] for i in idx]
         except FileNotFoundError:
             if verbose:
                 print(
                     f"File {input_amo} could not be found \
 to parse CSF energy contributions."
                 )
-        return indices, energies
+        if return_err:
+            return indices, energies, errors
+        else:
+            return indices, energies
 
     def get_transformation_matrix(
         self, csf_coefficients: list, csfs: list, CI_coefficients: list

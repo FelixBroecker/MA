@@ -15,7 +15,7 @@ class SALC:
         self.spanned_basis: dict[str, list] = {}
         self.orbital_basis: dict[str, list] = {}
         self.orbital_basisfunctions: dict[str, list] = {}
-        self.proj_results = {}
+        self.proj_results: dict[str, dict[str, list]] = {}
         self.get_operations()
 
     def get_operations(self):
@@ -720,17 +720,12 @@ class SALC:
                         * int(operation.split()[0])
                     )
                     tmp += res
-                    # print(np.dot(matrix, px_basis)*self.characTab.characters[label][counter])
-                    # print(operation)
                     counter += 1
 
                 projection = dim / order * tmp
                 if not np.all(projection == 0):
                     mulliken_label_res.append(label)
                     projection_res.append(projection)
-        # print(orbital)
-        # print(mulliken_label_res)
-        # print()
         return mulliken_label_res, projection_res
 
     def get_salcs(self):
@@ -851,11 +846,42 @@ class SALC:
                         if same:
                             symmetries[i] = mul
                             break
+        print()
         print(symmetries)
         print(len(symmetries))
 
+    def assign_mo_symmetry_species(self, mos):
+        """
+        Assign symmetries sigma, pi or delta to molecular orbtals.
+        sigma orbitals: s, p_z, d_zz        orbitals contribute
+        pi orbitals:    p_x, p_y, dyz, dxz  orbitals contribute
+        delta orbitals: d_xy, d_xx-yy | dxx, dyy  orbitals contribute
+        """
+        symmetry_species_res = []
+        symmetry_species_bas = {
+            "sigma": {"orb": ["s", "pz", "dzz"], "found_all": False},
+            "pi": {"orb": ["px", "py", "dyz", "dxz"], "found_all": False},
+            "delta": {
+                "orb": ["dxx", "dyy", "dxxyy", "dxy"],
+                "found_all": False,
+            },
+        }
+        for mo in mos:
+            for i, contribution in enumerate(mo):
+                if contribution:
+                    orb_species = re.search(
+                        r"\d+(\D+)", self.basis[i].split("_")[-1]
+                    ).group(1)
+                    for key, symm in symmetry_species_bas.items():
+                        symm["found_all"] = orb_species in symm["orb"]
+            for key, value in symmetry_species_bas.items():
+                if value["found_all"]:
+                    symmetry_species_res.append(key)
+        return symmetry_species_res
+
 
 data_set = "c2_tz"
+cartesian = False
 if data_set == "c2_sz":
     # C2 in minimal basis
     path = "/home/broecker/research/molecules/c2/pbe0/orca/sto-3g/orca.yaml"
@@ -884,6 +910,11 @@ if data_set == "c2_sz":
         "B3g",
         "B1u",
     ]
+    # parse MO coefficients
+    with open(path, "r") as file:
+        data = yaml.safe_load(file)
+    mos = data["molecularOrbitals"]["coefficients"].values()
+
 elif data_set == "c2_dz":
     # C2 in double zeta
     path = "/home/broecker/research/molecules/c2/pbe0/orca/dzae/orca.yaml"
@@ -932,10 +963,14 @@ elif data_set == "c2_dz":
         "Ag",
         "B1u",
     ]
+    # parse MO coefficients
+    with open(path, "r") as file:
+        data = yaml.safe_load(file)
+    mos = data["molecularOrbitals"]["coefficients"].values()
+
 elif data_set == "c2_tz":
     path = "/home/broecker/research/molecules/c2/pbe0/orca/tzpae/orca.yaml"
     point_group = "d4h_expanded"
-    cartesian = True
     if not cartesian:
         orbital_basis = [
             "C1_1s",
@@ -1102,33 +1137,32 @@ elif data_set == "c2_tz":
         "A1G",
         "A2U",
     ]
+    # parse orca mos
+    data = [[] for _ in orbital_basis]
+    with open(
+        "/home/broecker/research/molecules/c2/pbe0/orca/tzpae/orca.mkl", "r"
+    ) as reffile:
+        found = False
+        for line in reffile:
+            if "$END" in line:
+                found = False
+            if "$COEFF_ALPHA" in line:
+                found = True
+                continue
+            if "a1g" in line:
+                counter = 0
+                line = reffile.readline()
+                continue
+            if found:
+                items = line.split()
+                for val in items:
+                    data[counter].append(float(val))
+                counter += 1
+    mos = list(map(list, zip(*data)))
 else:
     print("Invalid input.")
     exit()
 
-data = [[] for _ in orbital_basis]
-
-# parse orca mos
-with open(
-    "/home/broecker/research/molecules/c2/pbe0/orca/tzpae/orca.mkl", "r"
-) as reffile:
-    found = False
-    for line in reffile:
-        if "$END" in line:
-            found = False
-        if "$COEFF_ALPHA" in line:
-            found = True
-            continue
-        if "a1g" in line:
-            counter = 0
-            line = reffile.readline()
-            continue
-        if found:
-            items = line.split()
-            for val in items:
-                data[counter].append(float(val))
-            counter += 1
-transposed = list(map(list, zip(*data)))
 
 if cartesian:
     data = [[] for _ in orbital_basis]
@@ -1156,15 +1190,8 @@ if cartesian:
                 for val in items:
                     data[counter].append(float(val))
                 counter += 1
-    transposed = list(map(list, zip(*data)))
+    mos = list(map(list, zip(*data)))
 
-# parse MO coefficients
-with open(path, "r") as file:
-    data = yaml.safe_load(file)
-
-mos = data["molecularOrbitals"]["coefficients"].values()
-if cartesian:
-    mos = transposed
 
 salc = SALC(
     point_group,
@@ -1174,11 +1201,15 @@ salc = SALC(
 
 salc.get_salcs()
 salc.assign_mo_coefficients(mos)
+salc.assign_mo_symmetry_species(mos)
+exit()
+print()
 print("Orca reference:")
 print(orca_reference)
 print(len(orca_reference))
 
 if data_set == "c2_tz":
+    print()
     print("Gamess reference (cartesian):")
     print(gamess_reference)
     print(len(gamess_reference))

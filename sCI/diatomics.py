@@ -30,7 +30,7 @@ class Diatomic:
         self.basis = [self.pi_x, self.pi_y]
         self.dim_basis = 0
         self.dim_tuple = 0
-        self.Lz2_mat = np.zeros((self.dim_tuple, self.dim_tuple))
+        self.product_basis = []
 
     def tensorProd(self, tup):
         """Return tensor product of matrices in tuple"""
@@ -39,19 +39,15 @@ class Diatomic:
             res = np.kron(res, mat)
         return res
 
-    def update_Lz2(self):
-        """"""
-        self.Lz2_mat = np.zeros((self.dim_tuple, self.dim_tuple))
-
     def test(self):
         """ """
-        n_elec = 4
+        n_elec = 2
         self.dim_basis = len(self.basis)
         self.dim_tuple = n_elec ** self.dim_basis
 
-        productBasis = self.get_product_basis(n_elec)
+        self.product_basis = self.get_product_basis(n_elec)
 
-        example = self.apply_lz2(productBasis[0])
+        example = self.apply_lz2(self.product_basis[0])
         self.get_lz_sq_matrix()
 
         print(example)
@@ -89,8 +85,16 @@ class Diatomic:
         return res
 
     def get_lz_sq_matrix(self):
-        """Return results of Lz^2 operator acting on basis functions."""
-        self.update_Lz2()
+        """Return Lz^2 matrix according to <i|Lz^2|j>."""
+        lz2Mat = np.zeros((self.dim_tuple, self.dim_tuple))
+        for i, func_i in enumerate(self.product_basis):
+            for j, func_j in enumerate(self.product_basis):
+                res = self.tensorProd(func_i).T @ self.apply_lz2(func_j)
+                if np.abs(res.imag) > 1e-16:
+                    raise ValueError("complex result")
+                lz2Mat[i, j] = np.real(res)
+
+        return lz2Mat
 
     def get_product_basis(self, n_elec):
         """
@@ -116,6 +120,7 @@ class Diatomic:
                 i = i // self.dim_basis
             all_combinations.append(combination)
         return all_combinations
+
 
 diatom = Diatomic()
 diatom.test()

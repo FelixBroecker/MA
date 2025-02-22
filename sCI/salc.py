@@ -173,6 +173,10 @@ class SALC:
                 "py2",
                 "pz2",
             ],
+            "pi": [
+                "pi_x",
+                "pi_y",
+            ],
             "d": [
                 "dxy1",
                 "dxz1",
@@ -210,6 +214,7 @@ class SALC:
             np.array([0, 0, 0, 0, 1, 0]),
             np.array([0, 0, 0, 0, 0, 1]),
         ]
+        pi_orbital_basis = [np.array([1, 0]), np.array([0, 1])]
         n_d_orbitals = len(self.orbital_basisfunctions["d"])
         d_orbital_basis = [
             np.eye(n_d_orbitals)[i] for i in range(n_d_orbitals)
@@ -348,6 +353,56 @@ class SALC:
         for mulliken, operations in pz_orbs.items():
             pz_orbs[mulliken] = self.get_transformation_matrix(
                 operations, "p", orb_empty
+            )
+
+        pi_x__u_orbs = {
+            "1 E":      ["pi_x -> +pi_x"],
+            "1 C4_z+":  ["pi_x -> +pi_y"],
+            "1 C4_z-":  ["pi_x -> -pi_y"],
+            "1 C2":     ["pi_x -> -pi_x"],
+            "1 C2''x":  ["pi_x -> +pi_x"],
+            "1 C2''y":  ["pi_x -> -pi_x"],
+            "1 C2'''1": ["pi_x -> +pi_y"],
+            "1 C2'''2": ["pi_x -> -pi_y"],
+            "1 i":      ["pi_x -> -pi_x"],
+            "1 S4+":    ["pi_x -> +pi_y"],
+            "1 S4-":    ["pi_x -> -pi_y"],
+            "1 sh":     ["pi_x -> +pi_x"],
+            "1 sv'":    ["pi_x -> +pi_x"],
+            "1 sv''":   ["pi_x -> -pi_x"],
+            "1 sd'":    ["pi_x -> +pi_y"],
+            "1 sd''":   ["pi_x -> -pi_y"],
+        }
+        pi_x_u_reducable_basis = [1, 0, 0, -1, -1, 1, 0, 0, -1, 0, 0, 1, -1, 1, 0, 0]
+        # convert to transformation matrix
+        for mulliken, operations in pi_x__u_orbs.items():
+            pi_x__u_orbs[mulliken] = self.get_transformation_matrix(
+                operations, "pi", orb_empty
+            )
+
+        pi_y__u_orbs = {
+            "1 E":      ["pi_y -> +pi_y"],
+            "1 C4_z+":  ["pi_y -> -pi_x"],
+            "1 C4_z-":  ["pi_y -> +pi_x"],
+            "1 C2":     ["pi_y -> -pi_x"],
+            "1 C2''x":  ["pi_y -> -pi_y"],
+            "1 C2''y":  ["pi_y -> +pi_y"],
+            "1 C2'''1": ["pi_y -> +pi_y"],
+            "1 C2'''2": ["pi_y -> +pi_x"],
+            "1 i":      ["pi_y -> -pi_y"],
+            "1 S4+":    ["pi_y -> -pi_x"],
+            "1 S4-":    ["pi_y -> +pi_x"],
+            "1 sh":     ["pi_y -> +pi_y"],
+            "1 sv'":    ["pi_y -> -pi_y"],
+            "1 sv''":   ["pi_y -> +pi_y"],
+            "1 sd'":    ["pi_y -> +pi_x"],
+            "1 sd''":   ["pi_y -> -pi_x"],
+        }
+        pi_y_u_reducable_basis = [1, 0, 0, -1, -1, 1, 0, 0, -1, 0, 0, 1, -1, 1, 0, 0]
+        # convert to transformation matrix
+        for mulliken, operations in pi_y__u_orbs.items():
+            pi_y__u_orbs[mulliken] = self.get_transformation_matrix(
+                operations, "pi", orb_empty
             )
 
         dxy_orbs = {
@@ -656,6 +711,8 @@ class SALC:
         self.operation_matrices["px"] = px_orbs
         self.operation_matrices["py"] = py_orbs
         self.operation_matrices["pz"] = pz_orbs
+        self.operation_matrices["pi_x"] = pi_x__u_orbs
+        self.operation_matrices["pi_y"] = pi_y__u_orbs
         self.operation_matrices["dxy"] = dxy_orbs
         self.operation_matrices["dxz"] = dxz_orbs
         self.operation_matrices["dyz"] = dyz_orbs
@@ -670,6 +727,8 @@ class SALC:
         self.spanned_basis["px"] = px_reducable_basis
         self.spanned_basis["py"] = py_reducable_basis
         self.spanned_basis["pz"] = pz_reducable_basis
+        self.spanned_basis["pi_x"] = pi_x_u_reducable_basis
+        self.spanned_basis["pi_y"] = pi_y_u_reducable_basis
         self.spanned_basis["dxy"] = dxy_reducable_basis
         self.spanned_basis["dxz"] = dxz_reducable_basis
         self.spanned_basis["dyz"] = dyz_reducable_basis
@@ -684,6 +743,8 @@ class SALC:
         self.orbital_basis["px"] = p_orbital_basis
         self.orbital_basis["py"] = p_orbital_basis
         self.orbital_basis["pz"] = p_orbital_basis
+        self.orbital_basis["pi_x"] = pi_orbital_basis
+        self.orbital_basis["pi_y"] = pi_orbital_basis
         self.orbital_basis["dxy"] = d_orbital_basis
         self.orbital_basis["dxz"] = d_orbital_basis
         self.orbital_basis["dyz"] = d_orbital_basis
@@ -721,11 +782,14 @@ class SALC:
                     )
                     tmp += res
                     counter += 1
+                print(tmp)
 
                 projection = dim / order * tmp
                 if not np.all(projection == 0):
                     mulliken_label_res.append(label)
                     projection_res.append(projection)
+        print(projection_res)
+        exit()
         return mulliken_label_res, projection_res
 
     def get_salcs(self):
@@ -846,9 +910,9 @@ class SALC:
                         if same:
                             symmetries[i] = mul
                             break
-        print()
-        print(symmetries)
-        print(len(symmetries))
+        # print()
+        # print(symmetries)
+        # print(len(symmetries))
 
     def assign_mo_symmetry_species(self, mos):
         """
@@ -1163,53 +1227,53 @@ else:
     print("Invalid input.")
     exit()
 
+if __name__ == "__main__":
+    if cartesian:
+        data = [[] for _ in orbital_basis]
+        # parse gamess mos
+        counter = 0
+        with open(
+            "/home/broecker/research/molecules/c2/pbe0/gamess/gamess.out", "r"
+        ) as reffile:
+            found = False
+            for line in reffile:
+                if "EIGENVECTORS" in line:
+                    found = True
+                    for _ in range(6):
+                        line = reffile.readline()
+                if "...... END OF RHF CALCULATION ......" in line:
+                    found = False
+                    break
+                if counter == len(orbital_basis):
+                    counter = 0
+                    for _ in range(4):
+                        line = reffile.readline()
+                if found:
+                    items = line.split()
+                    items = items[4:]
+                    for val in items:
+                        data[counter].append(float(val))
+                    counter += 1
+        mos = list(map(list, zip(*data)))
 
-if cartesian:
-    data = [[] for _ in orbital_basis]
-    # parse gamess mos
-    counter = 0
-    with open(
-        "/home/broecker/research/molecules/c2/pbe0/gamess/gamess.out", "r"
-    ) as reffile:
-        found = False
-        for line in reffile:
-            if "EIGENVECTORS" in line:
-                found = True
-                for _ in range(6):
-                    line = reffile.readline()
-            if "...... END OF RHF CALCULATION ......" in line:
-                found = False
-                break
-            if counter == len(orbital_basis):
-                counter = 0
-                for _ in range(4):
-                    line = reffile.readline()
-            if found:
-                items = line.split()
-                items = items[4:]
-                for val in items:
-                    data[counter].append(float(val))
-                counter += 1
-    mos = list(map(list, zip(*data)))
 
+    salc = SALC(
+        point_group,
+        orbital_basis,
+        cartesian=cartesian,
+    )
 
-salc = SALC(
-    point_group,
-    orbital_basis,
-    cartesian=cartesian,
-)
-
-salc.get_salcs()
-salc.assign_mo_coefficients(mos)
-salc.assign_mo_symmetry_species(mos)
-exit()
-print()
-print("Orca reference:")
-print(orca_reference)
-print(len(orca_reference))
-
-if data_set == "c2_tz":
+    salc.get_salcs()
+    salc.assign_mo_coefficients(mos)
+    salc.assign_mo_symmetry_species(mos)
+    exit()
     print()
-    print("Gamess reference (cartesian):")
-    print(gamess_reference)
-    print(len(gamess_reference))
+    print("Orca reference:")
+    print(orca_reference)
+    print(len(orca_reference))
+
+    if data_set == "c2_tz":
+        print()
+        print("Gamess reference (cartesian):")
+        print(gamess_reference)
+        print(len(gamess_reference))

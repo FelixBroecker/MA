@@ -4,6 +4,7 @@ import numpy as np
 
 # from salc import SALC
 from csf import SelectedCI
+from salc import SALC
 
 
 class Diatomic:
@@ -43,14 +44,23 @@ class Diatomic:
         """ """
         n_elec = 2
         self.dim_basis = len(self.basis)
-        self.dim_tuple = n_elec ** self.dim_basis
+        self.dim_tuple = self.dim_basis ** n_elec
 
         self.product_basis = self.get_product_basis(n_elec)
 
-        example = self.apply_lz2(self.product_basis[0])
-        self.get_lz_sq_matrix()
+        Lz_square_mat = self.get_lz_sq_matrix()
 
-        print(example)
+        eig, evec = np.linalg.eigh(Lz_square_mat)
+        print(eig)
+        print(evec)
+        evec = evec.T
+
+        salc = SALC("d4h_expanded", [])
+        mulliken_lables, linear_combs = self.get_irrep_of_linear_comb(salc, evec[0])
+        for i, arr in enumerate(linear_combs):
+            if np.any(arr):
+                print(mulliken_lables[i])
+                print(arr)
 
         # print(np.kron(self.pi_x, self.pi_y))
 
@@ -90,7 +100,7 @@ class Diatomic:
         for i, func_i in enumerate(self.product_basis):
             for j, func_j in enumerate(self.product_basis):
                 res = self.tensorProd(func_i).T @ self.apply_lz2(func_j)
-                if np.abs(res.imag) > 1e-16:
+                if np.abs(res.imag) > 1e-14:
                     raise ValueError("complex result")
                 lz2Mat[i, j] = np.real(res)
 
@@ -101,13 +111,13 @@ class Diatomic:
         Return all basis function combinations of product basis functions.
         """
         all_combinations = []
-        print(self.dim_tuple)
         for n in range(self.dim_tuple):
             combination = []
             # set start index for function from basis functions
             i = n
             # get one tuple of basis functions. go from largest to smallest to
-            # get the correct order of basis functions ("lexicographical order")
+            # get the correct order of basis functions
+            # ("lexicographical order")
             for _ in range(n_elec, 0, -1):
                 # get the right most "least significant digit" in basis of
                 # self.dim_basis
@@ -121,6 +131,45 @@ class Diatomic:
             all_combinations.append(combination)
         return all_combinations
 
+    def get_irrep_of_linear_comb(
+            self,
+            salc: SALC,
+            linear_combination: list[float]
+            ):
+        """Return all irreducible representations of of the linear
+        combintation of productbasis. Apply projection operator
+        p = dim/order * sum(character * symmetry_operator * basis)"""
+
+        res_mulliken_labels: list[str] = []
+        res_linear_comb: list[list] = []
+
+        for mulliken in salc.characTab.characters:
+            mulliken_tmp = np.zeros((self.dim_tuple, 1), dtype=np.complex128)
+            for i, contribution in enumerate(linear_combination):
+                # if contribution is zero, go to next product with contribution
+                if not contribution:
+                    continue
+                # get result of applying projection operator on basis
+                # function product
+                res_operation = salc.apply_symmetry_operator_on_product(
+                    self.product_basis[i]
+                    )
+                sum_res = np.zeros((self.dim_tuple, 1), dtype=np.complex128)
+                for prods, character in zip(res_operation, salc.characTab.characters[mulliken]):
+                    sum_res += character * self.tensorProd(prods)
+                mulliken_tmp += np.sign(contribution) * sum_res
+            res_mulliken_labels.append(mulliken)
+            res_linear_comb.append(
+                salc.characTab.get_dimension(mulliken) / salc.characTab.order * mulliken_tmp
+                )
+        return res_mulliken_labels, res_linear_comb
+
 
 diatom = Diatomic()
 diatom.test()
+
+salc = SALC("d4h_expanded", [])
+orb_bas_x = salc.operation_matrices["pi_x"]
+orb_bas_y = salc.operation_matrices["pi_y"]
+
+#print(salc.orbital_basis["pi_y"])

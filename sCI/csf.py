@@ -8,6 +8,7 @@ from charactertables import CharacterTable
 from spincoupling import SpinCoupling
 
 
+# TODO change class name and seperate selected CI part to different class
 class SelectedCI:
     """generate excited determinants"""
 

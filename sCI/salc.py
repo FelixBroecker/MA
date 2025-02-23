@@ -373,6 +373,7 @@ class SALC:
             "1 sd'":    ["pi_x -> +pi_y"],
             "1 sd''":   ["pi_x -> -pi_y"],
         }
+        orb_empty = np.zeros((len(pi_orbital_basis), len(pi_orbital_basis)))
         pi_x_u_reducable_basis = [1, 0, 0, -1, -1, 1, 0, 0, -1, 0, 0, 1, -1, 1, 0, 0]
         # convert to transformation matrix
         for mulliken, operations in pi_x__u_orbs.items():
@@ -384,11 +385,11 @@ class SALC:
             "1 E":      ["pi_y -> +pi_y"],
             "1 C4_z+":  ["pi_y -> -pi_x"],
             "1 C4_z-":  ["pi_y -> +pi_x"],
-            "1 C2":     ["pi_y -> -pi_x"],
+            "1 C2":     ["pi_y -> -pi_y"],
             "1 C2''x":  ["pi_y -> -pi_y"],
             "1 C2''y":  ["pi_y -> +pi_y"],
-            "1 C2'''1": ["pi_y -> +pi_y"],
-            "1 C2'''2": ["pi_y -> +pi_x"],
+            "1 C2'''1": ["pi_y -> +pi_x"],
+            "1 C2'''2": ["pi_y -> -pi_x"],
             "1 i":      ["pi_y -> -pi_y"],
             "1 S4+":    ["pi_y -> -pi_x"],
             "1 S4-":    ["pi_y -> +pi_x"],
@@ -745,6 +746,7 @@ class SALC:
         self.orbital_basis["pz"] = p_orbital_basis
         self.orbital_basis["pi_x"] = pi_orbital_basis
         self.orbital_basis["pi_y"] = pi_orbital_basis
+        self.orbital_basis["pi"] = pi_orbital_basis
         self.orbital_basis["dxy"] = d_orbital_basis
         self.orbital_basis["dxz"] = d_orbital_basis
         self.orbital_basis["dyz"] = d_orbital_basis
@@ -788,9 +790,39 @@ class SALC:
                 if not np.all(projection == 0):
                     mulliken_label_res.append(label)
                     projection_res.append(projection)
-        print(projection_res)
-        exit()
         return mulliken_label_res, projection_res
+
+    def apply_symmetry_operator_on_product(self, prod):
+        """
+        Returns the product of basis functions for each irrep after applying
+        the symmetry operations.
+        """
+        # labels according to the basis functions
+        label = ["pi_x", "pi_y"]
+
+        # reshape basis functions
+        basis_functions = []
+        for i, elem in enumerate(self.orbital_basis["pi"]):
+            basis_functions.append(elem.reshape(-1, 1))
+
+        # iterate over operations
+        operation_results = []
+        for i, operation_symbol in enumerate(self.characTab.operations):
+            tmp_res = []
+            for func in prod:
+                # get index of respective basis_function
+                index = next(j for j, arr in enumerate(basis_functions) if np.array_equal(arr, func))
+                lab = label[index]
+                dot = ( np.dot(
+                        self.operation_matrices[lab][operation_symbol],
+                        basis_functions) * int(operation_symbol.split()[0])
+                        )
+                # do not append the zero vector
+                for arr in dot:
+                    if np.any(arr):
+                        tmp_res.append(arr)
+            operation_results.append(tmp_res)
+        return operation_results
 
     def get_salcs(self):
         """"""

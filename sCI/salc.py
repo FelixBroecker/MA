@@ -356,25 +356,42 @@ class SALC:
             )
 
         pi_x__u_orbs = {
-            "1 E":      ["pi_x -> +pi_x"],
-            "1 C4_z+":  ["pi_x -> +pi_y"],
-            "1 C4_z-":  ["pi_x -> -pi_y"],
-            "1 C2":     ["pi_x -> -pi_x"],
-            "1 C2''x":  ["pi_x -> +pi_x"],
-            "1 C2''y":  ["pi_x -> -pi_x"],
+            "1 E": ["pi_x -> +pi_x"],
+            "1 C4_z+": ["pi_x -> +pi_y"],
+            "1 C4_z-": ["pi_x -> -pi_y"],
+            "1 C2": ["pi_x -> -pi_x"],
+            "1 C2''x": ["pi_x -> +pi_x"],
+            "1 C2''y": ["pi_x -> -pi_x"],
             "1 C2'''1": ["pi_x -> +pi_y"],
             "1 C2'''2": ["pi_x -> -pi_y"],
-            "1 i":      ["pi_x -> -pi_x"],
-            "1 S4+":    ["pi_x -> +pi_y"],
-            "1 S4-":    ["pi_x -> -pi_y"],
-            "1 sh":     ["pi_x -> +pi_x"],
-            "1 sv'":    ["pi_x -> +pi_x"],
-            "1 sv''":   ["pi_x -> -pi_x"],
-            "1 sd'":    ["pi_x -> +pi_y"],
-            "1 sd''":   ["pi_x -> -pi_y"],
+            "1 i": ["pi_x -> -pi_x"],
+            "1 S4+": ["pi_x -> -pi_y"],
+            "1 S4-": ["pi_x -> +pi_y"],
+            "1 sh": ["pi_x -> +pi_x"],
+            "1 sv'": ["pi_x -> +pi_x"],
+            "1 sv''": ["pi_x -> -pi_x"],
+            "1 sd'": ["pi_x -> +pi_y"],
+            "1 sd''": ["pi_x -> -pi_y"],
         }
         orb_empty = np.zeros((len(pi_orbital_basis), len(pi_orbital_basis)))
-        pi_x_u_reducable_basis = [1, 0, 0, -1, -1, 1, 0, 0, -1, 0, 0, 1, -1, 1, 0, 0]
+        pi_x_u_reducable_basis = [
+            1,
+            0,
+            0,
+            -1,
+            +1,
+            -1,
+            0,
+            0,
+            -1,
+            0,
+            0,
+            1,
+            +1,
+            -1,
+            0,
+            0,
+        ]
         # convert to transformation matrix
         for mulliken, operations in pi_x__u_orbs.items():
             pi_x__u_orbs[mulliken] = self.get_transformation_matrix(
@@ -382,27 +399,128 @@ class SALC:
             )
 
         pi_y__u_orbs = {
-            "1 E":      ["pi_y -> +pi_y"],
-            "1 C4_z+":  ["pi_y -> -pi_x"],
-            "1 C4_z-":  ["pi_y -> +pi_x"],
-            "1 C2":     ["pi_y -> -pi_y"],
-            "1 C2''x":  ["pi_y -> -pi_y"],
-            "1 C2''y":  ["pi_y -> +pi_y"],
+            "1 E": ["pi_y -> +pi_y"],
+            "1 C4_z+": ["pi_y -> -pi_x"],
+            "1 C4_z-": ["pi_y -> +pi_x"],
+            "1 C2": ["pi_y -> -pi_y"],
+            "1 C2''x": ["pi_y -> -pi_y"],
+            "1 C2''y": ["pi_y -> +pi_y"],
             "1 C2'''1": ["pi_y -> +pi_x"],
             "1 C2'''2": ["pi_y -> -pi_x"],
-            "1 i":      ["pi_y -> -pi_y"],
-            "1 S4+":    ["pi_y -> -pi_x"],
-            "1 S4-":    ["pi_y -> +pi_x"],
-            "1 sh":     ["pi_y -> +pi_y"],
-            "1 sv'":    ["pi_y -> -pi_y"],
-            "1 sv''":   ["pi_y -> +pi_y"],
-            "1 sd'":    ["pi_y -> +pi_x"],
-            "1 sd''":   ["pi_y -> -pi_x"],
+            "1 i": ["pi_y -> -pi_y"],
+            "1 S4+": ["pi_y -> +pi_x"],
+            "1 S4-": ["pi_y -> -pi_x"],
+            "1 sh": ["pi_y -> +pi_y"],
+            "1 sv'": ["pi_y -> -pi_y"],
+            "1 sv''": ["pi_y -> +pi_y"],
+            "1 sd'": ["pi_y -> +pi_x"],
+            "1 sd''": ["pi_y -> -pi_x"],
         }
-        pi_y_u_reducable_basis = [1, 0, 0, -1, -1, 1, 0, 0, -1, 0, 0, 1, -1, 1, 0, 0]
+        pi_y_u_reducable_basis = [
+            1,
+            0,
+            0,
+            -1,
+            -1,
+            1,
+            0,
+            0,
+            -1,
+            0,
+            0,
+            1,
+            -1,
+            1,
+            0,
+            0,
+        ]
         # convert to transformation matrix
         for mulliken, operations in pi_y__u_orbs.items():
             pi_y__u_orbs[mulliken] = self.get_transformation_matrix(
+                operations, "pi", orb_empty
+            )
+
+        pi_x_g_orbs = {
+            "1 E": ["pi_x -> +pi_x"],
+            "1 C4_z+": ["pi_x -> +pi_y"],
+            "1 C4_z-": ["pi_x -> -pi_y"],
+            "1 C2": ["pi_x -> -pi_x"],
+            "1 C2''x": ["pi_x -> +pi_x"],
+            "1 C2''y": ["pi_x -> -pi_x"],
+            "1 C2'''1": ["pi_x -> +pi_y"],
+            "1 C2'''2": ["pi_x -> -pi_y"],
+            "1 i": ["pi_x -> +pi_x"],
+            "1 S4+": ["pi_x -> +pi_y"],
+            "1 S4-": ["pi_x -> -pi_y"],
+            "1 sh": ["pi_x -> -pi_x"],
+            "1 sv'": ["pi_x -> +pi_x"],
+            "1 sv''": ["pi_x -> -pi_x"],
+            "1 sd'": ["pi_x -> +pi_y"],
+            "1 sd''": ["pi_x -> -pi_y"],
+        }
+        pi_x_g_reducable_basis = [
+            1,
+            0,
+            0,
+            -1,
+            1,
+            -1,
+            0,
+            0,
+            +1,
+            0,
+            0,
+            -1,
+            +1,
+            -1,
+            0,
+            0,
+        ]
+        # convert to transformation matrix
+        for mulliken, operations in pi_x_g_orbs.items():
+            pi_x_g_orbs[mulliken] = self.get_transformation_matrix(
+                operations, "pi", orb_empty
+            )
+
+        pi_y_g_orbs = {
+            "1 E": ["pi_y -> +pi_y"],
+            "1 C4_z+": ["pi_y -> -pi_x"],
+            "1 C4_z-": ["pi_y -> +pi_x"],
+            "1 C2": ["pi_y -> -pi_y"],
+            "1 C2''x": ["pi_y -> -pi_y"],
+            "1 C2''y": ["pi_y -> +pi_y"],
+            "1 C2'''1": ["pi_y -> +pi_x"],
+            "1 C2'''2": ["pi_y -> -pi_x"],
+            "1 i": ["pi_y -> +pi_y"],
+            "1 S4+": ["pi_y -> -pi_x"],
+            "1 S4-": ["pi_y -> +pi_x"],
+            "1 sh": ["pi_y -> -pi_y"],
+            "1 sv'": ["pi_y -> -pi_y"],
+            "1 sv''": ["pi_y -> +pi_y"],
+            "1 sd'": ["pi_y -> +pi_x"],
+            "1 sd''": ["pi_y -> -pi_x"],
+        }
+        pi_y_g_reducable_basis = [
+            1,
+            0,
+            0,
+            -1,
+            -1,
+            1,
+            0,
+            0,
+            +1,
+            0,
+            0,
+            -1,
+            -1,
+            1,
+            0,
+            0,
+        ]
+        # convert to transformation matrix
+        for mulliken, operations in pi_y_g_orbs.items():
+            pi_y_g_orbs[mulliken] = self.get_transformation_matrix(
                 operations, "pi", orb_empty
             )
 
@@ -712,8 +830,10 @@ class SALC:
         self.operation_matrices["px"] = px_orbs
         self.operation_matrices["py"] = py_orbs
         self.operation_matrices["pz"] = pz_orbs
-        self.operation_matrices["pi_x"] = pi_x__u_orbs
-        self.operation_matrices["pi_y"] = pi_y__u_orbs
+        self.operation_matrices["pi_x_u"] = pi_x__u_orbs
+        self.operation_matrices["pi_y_u"] = pi_y__u_orbs
+        self.operation_matrices["pi_x_g"] = pi_x_g_orbs
+        self.operation_matrices["pi_y_g"] = pi_y_g_orbs
         self.operation_matrices["dxy"] = dxy_orbs
         self.operation_matrices["dxz"] = dxz_orbs
         self.operation_matrices["dyz"] = dyz_orbs
@@ -728,8 +848,10 @@ class SALC:
         self.spanned_basis["px"] = px_reducable_basis
         self.spanned_basis["py"] = py_reducable_basis
         self.spanned_basis["pz"] = pz_reducable_basis
-        self.spanned_basis["pi_x"] = pi_x_u_reducable_basis
-        self.spanned_basis["pi_y"] = pi_y_u_reducable_basis
+        self.spanned_basis["pi_x_u"] = pi_x_u_reducable_basis
+        self.spanned_basis["pi_y_u"] = pi_y_u_reducable_basis
+        self.spanned_basis["pi_x_g"] = pi_x_g_reducable_basis
+        self.spanned_basis["pi_y_g"] = pi_y_g_reducable_basis
         self.spanned_basis["dxy"] = dxy_reducable_basis
         self.spanned_basis["dxz"] = dxz_reducable_basis
         self.spanned_basis["dyz"] = dyz_reducable_basis
@@ -792,7 +914,7 @@ class SALC:
                     projection_res.append(projection)
         return mulliken_label_res, projection_res
 
-    def apply_symmetry_operator_on_product(self, prod):
+    def apply_symmetry_operator_on_product(self, prod, inversion=""):
         """
         Returns the product of basis functions for each irrep after applying
         the symmetry operations.
@@ -811,12 +933,16 @@ class SALC:
             tmp_res = []
             for func in prod:
                 # get index of respective basis_function
-                index = next(j for j, arr in enumerate(basis_functions) if np.array_equal(arr, func))
-                lab = label[index]
-                dot = ( np.dot(
-                        self.operation_matrices[lab][operation_symbol],
-                        basis_functions) * int(operation_symbol.split()[0])
-                        )
+                index = next(
+                    j
+                    for j, arr in enumerate(basis_functions)
+                    if np.array_equal(arr, func)
+                )
+                lab = label[index] + inversion
+                dot = np.dot(
+                    self.operation_matrices[lab][operation_symbol],
+                    basis_functions,
+                ) * int(operation_symbol.split()[0])
                 # do not append the zero vector
                 for arr in dot:
                     if np.any(arr):
@@ -1287,7 +1413,6 @@ if __name__ == "__main__":
                         data[counter].append(float(val))
                     counter += 1
         mos = list(map(list, zip(*data)))
-
 
     salc = SALC(
         point_group,

@@ -44,7 +44,7 @@ class Diatomic:
         """ """
         n_elec = 2
         self.dim_basis = len(self.basis)
-        self.dim_tuple = self.dim_basis ** n_elec
+        self.dim_tuple = self.dim_basis**n_elec
 
         self.product_basis = self.get_product_basis(n_elec)
 
@@ -56,7 +56,9 @@ class Diatomic:
         evec = evec.T
 
         salc = SALC("d4h_expanded", [])
-        mulliken_lables, linear_combs = self.get_irrep_of_linear_comb(salc, evec[0])
+        mulliken_lables, linear_combs = self.get_irrep_of_linear_comb(
+            salc, evec[0], inversion="_u"
+        )
         for i, arr in enumerate(linear_combs):
             if np.any(arr):
                 print(mulliken_lables[i])
@@ -132,10 +134,8 @@ class Diatomic:
         return all_combinations
 
     def get_irrep_of_linear_comb(
-            self,
-            salc: SALC,
-            linear_combination: list[float]
-            ):
+        self, salc: SALC, linear_combination: list[float], inversion=""
+    ):
         """Return all irreducible representations of of the linear
         combintation of productbasis. Apply projection operator
         p = dim/order * sum(character * symmetry_operator * basis)"""
@@ -152,16 +152,20 @@ class Diatomic:
                 # get result of applying projection operator on basis
                 # function product
                 res_operation = salc.apply_symmetry_operator_on_product(
-                    self.product_basis[i]
-                    )
+                    self.product_basis[i], inversion
+                )
                 sum_res = np.zeros((self.dim_tuple, 1), dtype=np.complex128)
-                for prods, character in zip(res_operation, salc.characTab.characters[mulliken]):
+                for prods, character in zip(
+                    res_operation, salc.characTab.characters[mulliken]
+                ):
                     sum_res += character * self.tensorProd(prods)
                 mulliken_tmp += np.sign(contribution) * sum_res
             res_mulliken_labels.append(mulliken)
             res_linear_comb.append(
-                salc.characTab.get_dimension(mulliken) / salc.characTab.order * mulliken_tmp
-                )
+                salc.characTab.get_dimension(mulliken)
+                / salc.characTab.order
+                * mulliken_tmp
+            )
         return res_mulliken_labels, res_linear_comb
 
 
@@ -169,7 +173,7 @@ diatom = Diatomic()
 diatom.test()
 
 salc = SALC("d4h_expanded", [])
-orb_bas_x = salc.operation_matrices["pi_x"]
-orb_bas_y = salc.operation_matrices["pi_y"]
+orb_bas_x = salc.operation_matrices["pi_x_g"]
+orb_bas_y = salc.operation_matrices["pi_y_g"]
 
-#print(salc.orbital_basis["pi_y"])
+# print(salc.orbital_basis["pi_y"])

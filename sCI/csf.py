@@ -190,7 +190,7 @@ to read AMOLQC wavefunction."
                         items = line.split()
                         indices.append(int(items[0]))
                         energies.append(float(items[1]))
-                        errors.append(float(items[2]))
+                        # errors.append(float(items[2]))
                     if "Index  Energy difference" in line:
                         found = True
                     if "$nrgs" in line:
@@ -199,7 +199,7 @@ to read AMOLQC wavefunction."
                 idx = np.array(indices).argsort()
                 indices = [indices[i] for i in idx]
                 energies = [energies[i] for i in idx]
-                errors = [errors[i] for i in idx]
+                # errors = [errors[i] for i in idx]
         except FileNotFoundError:
             if verbose:
                 print(
@@ -1275,6 +1275,7 @@ number of csfs in residual wf:\t{len(csf_coefficients[split_at:])}
         split_at=0,
         n_min=0,
         verbose=False,
+        n_expand=0,
     ):
         """select csfs by size of their coefficients and
         add next package of already generated csfs."""
@@ -1475,48 +1476,29 @@ is going to be generated for this selection."
 
         # print wavefunctions
         if split_at > 0:
+            n_cut = split_at
+            if len(csfs_selected) > split_at:
+                n_cut = len(csfs_selected) + n_expand
+
             self.write_AMOLQC(
-                csf_coefficients[:split_at],
-                csfs[:split_at],
-                CI_coefficients[:split_at],
+                csf_coefficients[:n_cut],
+                csfs[:n_cut],
+                CI_coefficients[:n_cut],
                 pretext=wfpretext,
                 file_name=f"{filename_optimized}_out.wf",
             )
             self.write_AMOLQC(
-                csf_coefficients[split_at:],
-                csfs[split_at:],
-                CI_coefficients[split_at:],
+                csf_coefficients[n_cut:],
+                csfs[n_cut:],
+                CI_coefficients[n_cut:],
                 file_name=f"{filename_residual}_out.wf",
             )
             if verbose:
                 print(
-                    f"number of csfs in next iteration wf: {len(csf_coefficients[:split_at])}"
+                    f"number of csfs in next iteration wf: {len(csf_coefficients[:n_cut])}"
                 )
                 print(
-                    f"number of csfs in residual wf: {len(csf_coefficients[split_at:])}"
-                )
-                print()
-        else:
-            n_selected = len(csfs_selected)
-            self.write_AMOLQC(
-                csf_coefficients[:n_selected],
-                csfs[:split_at],
-                CI_coefficients[:n_selected],
-                pretext=wfpretext,
-                file_name=f"{filename_optimized}_out.wf",
-            )
-            self.write_AMOLQC(
-                csf_coefficients[n_selected:],
-                csfs[n_selected:],
-                CI_coefficients[n_selected:],
-                file_name=f"{filename_residual}_out.wf",
-            )
-            if verbose:
-                print(
-                    f"number of csfs in next iteration wf: {len(csf_coefficients[:split_at])}"
-                )
-                print(
-                    f"number of csfs in residual wf: {len(csf_coefficients[split_at:])}"
+                    f"number of csfs in residual wf: {len(csf_coefficients[:n_cut])}"
                 )
                 print()
         # else:

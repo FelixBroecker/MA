@@ -1497,14 +1497,37 @@ is going to be generated for this selection."
                 )
                 print()
         else:
-            # write wavefunction in AMOLQC format
+            n_selected = len(csfs_selected)
             self.write_AMOLQC(
-                csf_coefficients,
-                csfs,
-                CI_coefficients,
+                csf_coefficients[:n_selected],
+                csfs[:split_at],
+                CI_coefficients[:n_selected],
                 pretext=wfpretext,
                 file_name=f"{filename_optimized}_out.wf",
             )
+            self.write_AMOLQC(
+                csf_coefficients[n_selected:],
+                csfs[n_selected:],
+                CI_coefficients[n_selected:],
+                file_name=f"{filename_residual}_out.wf",
+            )
+            if verbose:
+                print(
+                    f"number of csfs in next iteration wf: {len(csf_coefficients[:split_at])}"
+                )
+                print(
+                    f"number of csfs in residual wf: {len(csf_coefficients[split_at:])}"
+                )
+                print()
+        # else:
+        #    # write wavefunction in AMOLQC format
+        #    self.write_AMOLQC(
+        #        csf_coefficients,
+        #        csfs,
+        #        CI_coefficients,
+        #        pretext=wfpretext,
+        #        file_name=f"{filename_optimized}_out.wf",
+        #    )
         self.write_AMOLQC(
             csf_coefficients_discarded_all,
             csfs_discarded_all,

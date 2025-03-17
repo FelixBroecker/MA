@@ -62,6 +62,7 @@ def main():
             "thresholdType": "cut_at",
             "keepMin": 0,
             "blocksize": 0,
+            "nExpand": 0,
             "initialAMI": "",
             "iterationAMI": "",
             "finalAMI": "",
@@ -95,10 +96,11 @@ def main():
     wftype = data["WavefunctionOptions"]["wfType"]
 
     criterion = data["Specifications"]["criterion"]
-    threshold = data["Specifications"]["threshold"]
+    threshold = float(data["Specifications"]["threshold"])
     threshold_type = data["Specifications"]["thresholdType"]
     n_min = data["Specifications"]["keepMin"]
     blocksize = data["Specifications"]["blocksize"]
+    n_expand = data["Specifications"]["nExpand"]
     initial_ami = data["Specifications"]["initialAMI"]
     iteration_ami = data["Specifications"]["iterationAMI"]
     energy_ami = data["Specifications"]["energyAMI"]
@@ -123,6 +125,7 @@ def main():
         n_tasks,
         criterion,
         blocksize,
+        n_expand,
         sort,
         True,
         n_min,
@@ -186,12 +189,44 @@ def main():
         csf_coefficients, csfs, CI_coefficients, wfpretext = (
             sCI.read_AMOLQC_csfs(f"{wavefunction_name}.wf", N)
         )
-        csf_coefficients, csfs, CI_coefficients = sCI.sort_lists_by_list(
-            [csf_coefficients, csfs, CI_coefficients],
-            CI_coefficients,
-            side=-1,
-            absol=True,
-        )
+        if criterion == "energy":
+            indices, energies, errors = sCI.parse_csf_energies(
+                f"{energy_ami}.amo",
+                len(csfs) - 1,
+                sort_by_idx=True,
+                return_err=True,
+            )
+            energies.insert(0, np.ceil(max(energies)))
+            errors.insert(0, 0)
+            indices.insert(0, 0)
+
+            (
+                indices,
+                energies,
+                errors,
+                csf_coefficients,
+                csfs,
+                CI_coefficients,
+            ) = sCI.sort_lists_by_list(
+                [
+                    indices,
+                    energies,
+                    errors,
+                    csf_coefficients,
+                    csfs,
+                    CI_coefficients,
+                ],
+                energies,
+                side=-1,
+                absol=False,
+            )
+        else:
+            csf_coefficients, csfs, CI_coefficients = sCI.sort_lists_by_list(
+                [csf_coefficients, csfs, CI_coefficients],
+                CI_coefficients,
+                side=-1,
+                absol=True,
+            )
 
         if wftype == "csf" and not csf_coefficients:
             n_dets = len(csfs[:split_at])
@@ -226,7 +261,9 @@ def main():
             energy_ami=energy_ami,
         )
 
-    elif data["WavefunctionOptions"]["wavefunctionOperation"] == "test":
+    elif (
+        data["WavefunctionOptions"]["wavefunctionOperation"] == "determine_exc"
+    ):
         # indices, energies = sCI.parse_csf_energies(
         #   "block1/block_initial_dis_out.wf", 30, verbose=True
         # )
@@ -253,6 +290,12 @@ def main():
         initial_determinant = sCI.build_energy_lowest_detetminant(N)
         csf_coefficients, csfs, CI_coefficients, wfpretext = (
             sCI.read_AMOLQC_csfs(f"{wavefunction_name}.wf", N)
+        )
+        csf_coefficients, csfs, CI_coefficients = sCI.sort_lists_by_list(
+            [csf_coefficients, csfs, CI_coefficients],
+            CI_coefficients,
+            side=-1,
+            absol=True,
         )
         res = sCI.determine_excitations(
             csfs, initial_determinant, wf_type=wftype

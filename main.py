@@ -323,9 +323,9 @@ def main():
 
         print("Write wave function.")
         sCI.write_AMOLQC(
-            csf_coefficients[:split_at],
-            csfs[:split_at],
-            CI_coefficients[:split_at],
+            csf_coefficients,
+            csfs,
+            CI_coefficients,
             pretext=wfpretext,
             file_name=f"{wavefunction_name}_out.wf",
             wftype=wftype,

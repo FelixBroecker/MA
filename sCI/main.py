@@ -77,7 +77,13 @@ def main():
         for sub_key, sub_value in value.items():
             data[key][sub_key] = sub_value
     # TODO print input mor readable
-    print(data)
+    # print(data)
+
+    # print header
+    print(" " + "=" * 40)
+    print(" Wave function generation and editation.")
+    print(" " + "=" * 40)
+    print()
 
     N = data["MoleculeInformation"]["numberOfElectrons"]
     n_MO = data["MoleculeInformation"]["numberOfOrbitals"]
@@ -170,19 +176,42 @@ def main():
         csf_coefficients, csfs, CI_coefficients, wfpretext = (
             sCI.read_AMOLQC_csfs(f"{wavefunction_name}.wf", N)
         )
+        print(f"Number of csfs: {len(csfs)}.")
+        print("Convert CSFs to determinants.")
         CI_coefficients, _, dets = sCI.get_transformation_matrix(
             csf_coefficients, csfs, CI_coefficients
         )
+        print(f"Number of determinants: {len(dets)}.")
         CI_coefficients = np.diagonal(CI_coefficients)
+        CI_coefficients = [1 if n == 0 else 0 for n in range(len(dets))]
         csf_coefficients = []
+        print("Write wave function.")
         sCI.write_AMOLQC(
             csf_coefficients,
             dets,
             CI_coefficients,
             pretext=wfpretext,
             file_name=f"{wavefunction_name}_out.wf",
-            wftype=wftype,
+            wftype="det",
         )
+    elif (
+        data["WavefunctionOptions"]["wavefunctionOperation"] == "count_config"
+    ):
+        print("counting configurations for CSF wave function")
+
+        csf_coefficients, csfs, CI_coefficients, wfpretext = (
+            sCI.read_AMOLQC_csfs(f"{wavefunction_name}.wf", N)
+        )
+        print(f"number of csfs: {len(csfs)}")
+        print()
+        print("CSFs are expanded in determinants")
+
+        CI_coefficient_matrix, transformation_matrix, det_basis = (
+            sCI.get_transformation_matrix(
+                csf_coefficients, csfs, CI_coefficients
+            )
+        )
+        print(f"Number of determinants: {len(det_basis)}")
 
     elif data["WavefunctionOptions"]["wavefunctionOperation"] == "cut":
         # read wf and cut by split_at
@@ -220,7 +249,9 @@ def main():
                 side=-1,
                 absol=False,
             )
-        else:
+        elif criterion == "ci_coefficient":
+            # sort by CI coefficient
+            print("Sort wave function by absolute CI coefficient.")
             csf_coefficients, csfs, CI_coefficients = sCI.sort_lists_by_list(
                 [csf_coefficients, csfs, CI_coefficients],
                 CI_coefficients,
@@ -242,6 +273,7 @@ def main():
                 f"number of csfs generated from {n_dets} determinants is \
 {len(csfs)}."
             )
+        print("Write wave function.")
         sCI.write_AMOLQC(
             csf_coefficients[:split_at],
             csfs[:split_at],
@@ -264,33 +296,12 @@ def main():
     elif (
         data["WavefunctionOptions"]["wavefunctionOperation"] == "determine_exc"
     ):
-        # indices, energies = sCI.parse_csf_energies(
-        #   "block1/block_initial_dis_out.wf", 30, verbose=True
-        # )
-        # print(indices)
-        # print(energies)
-        # exit()
-        # auto.do_block_iteration(
-        #    4, "block_initial", iteration_ami, energy_ami=energy_ami
-        # )
-        # auto.do_final_iteration(
-        #    "it_final", "it2", 500, final_ami, energy_ami=energy_ami
-        # )
-        # reference_determinant = sCI.build_energy_lowest_detetminant(N)
-        # last_it = auto.do_selective_iteration(
-        #    1,
-        #    "it2",
-        #    iteration_ami,
-        #    energy_ami,
-        #    reference_determinant,
-        #    [1],
-        #    excitations,
-        # )
-        # auto.do_final_block("final", "block3", final_ami)
+
         initial_determinant = sCI.build_energy_lowest_detetminant(N)
         csf_coefficients, csfs, CI_coefficients, wfpretext = (
             sCI.read_AMOLQC_csfs(f"{wavefunction_name}.wf", N)
         )
+        print(csfs)
         csf_coefficients, csfs, CI_coefficients = sCI.sort_lists_by_list(
             [csf_coefficients, csfs, CI_coefficients],
             CI_coefficients,
@@ -300,9 +311,15 @@ def main():
         res = sCI.determine_excitations(
             csfs, initial_determinant, wf_type=wftype
         )
+
+        counter = [0 for i in range(10)]
         with open("excitation.out", "w") as reffile:
-            for item in res:
+            for i, item in enumerate(res):
+                counter[item] += 1
+                if item == 1:
+                    print(f"{csfs[i]}\n")
                 reffile.write(f"{item}\n")
+        print(counter)
 
     elif data["WavefunctionOptions"]["wavefunctionOperation"] == "exc":
         # read wf and cut by split_at

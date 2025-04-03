@@ -344,12 +344,13 @@ def main():
     elif (
         data["WavefunctionOptions"]["wavefunctionOperation"] == "determine_exc"
     ):
-
+        print(
+            "Determine excitations of wave functions CSFs (determinants not enabled)."
+        )
         initial_determinant = sCI.build_energy_lowest_detetminant(N)
         csf_coefficients, csfs, CI_coefficients, wfpretext = (
             sCI.read_AMOLQC_csfs(f"{wavefunction_name}.wf", N)
         )
-        print(csfs)
         csf_coefficients, csfs, CI_coefficients = sCI.sort_lists_by_list(
             [csf_coefficients, csfs, CI_coefficients],
             CI_coefficients,
@@ -360,13 +361,15 @@ def main():
             csfs, initial_determinant, wf_type=wftype
         )
 
-        counter = [0 for i in range(10)]
+        counter = [0 for i in range(20)]
         with open("excitation.out", "w") as reffile:
             for i, item in enumerate(res):
                 counter[item] += 1
-                if item == 1:
-                    print(f"{csfs[i]}\n")
                 reffile.write(f"{item}\n")
+        print()
+        print(
+            "List of number of excitations ([n_ground_state, n_singles, n_doubles, ...])."
+        )
         print(counter)
 
     elif data["WavefunctionOptions"]["wavefunctionOperation"] == "exc":

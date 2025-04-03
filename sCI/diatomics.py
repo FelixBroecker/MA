@@ -42,17 +42,24 @@ class Diatomic:
 
     def test(self):
         """ """
-        n_elec = 2
+        n_elec = 4
         self.dim_basis = len(self.basis)
         self.dim_tuple = self.dim_basis**n_elec
 
         self.product_basis = self.get_product_basis(n_elec)
+        print("product_basis:")
+        for bas in self.product_basis:
+            for b in bas:
+                print(b.T)
+            print()
 
         Lz_square_mat = self.get_lz_sq_matrix()
+        self.print_matrix(Lz_square_mat)
 
         eig, evec = np.linalg.eigh(Lz_square_mat)
         print(eig)
-        print(evec)
+        # print(evec)
+        self.print_matrix(evec)
         evec = evec.T
 
         salc = SALC("d4h_expanded", [])
@@ -65,6 +72,13 @@ class Diatomic:
                 print(arr)
 
         # print(np.kron(self.pi_x, self.pi_y))
+
+    def print_matrix(self, mat):
+        """Print matrix in a readable format"""
+        for i, _ in enumerate(mat):
+            for j, _ in enumerate(mat):
+                print(f"{mat[i, j]:.6f}", end=" ")
+            print()
 
     def apply_lz2(self, basis_product):
         """

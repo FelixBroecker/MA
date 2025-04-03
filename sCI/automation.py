@@ -22,13 +22,14 @@ class Automation:
         n_tasks,
         criterion: str,
         blocksize,
+        n_expand,
         sort_option,
         verbose,
         n_min,
         threshold,
         threshold_type,
         keep_all_singles,
-        max_csfs
+        max_csfs,
     ):
         self.sCI = SelectedCI()
         self.wavefunction_name = wavefunction_name
@@ -42,6 +43,7 @@ class Automation:
         self.frozen_electrons = frozen_electrons
         self.frozen_MOs = frozen_MOs
         self.blocksize = blocksize
+        self.n_expand = n_expand
         self.sort_option = sort_option
         self.verbose = verbose
         self.partition = partition
@@ -262,6 +264,7 @@ mpiexec -np {n_tasks} {path} {ami_name}.ami
                     split_at=self.blocksize,
                     n_min=self.n_min,
                     verbose=self.verbose,
+                    n_expand=self.n_expand,
                 )
                 mv(
                     f"{last_wavefunction}_out.wf",
@@ -517,60 +520,60 @@ blockwise opimization is finished."
         input_wf: str,
         max_csfs: int,
         final_ami: str,
-        energy_ami = "",
+        energy_ami="",
     ):
         #
         # add discarded csfs until max csfs number
         #
         dir_name = f"{label}"
-        #mkdir(dir_name)
+        # mkdir(dir_name)
         with cd(dir_name):
-            #cp(f"../{input_wf}.wf", ".")
-            #mv(f"../{input_wf}_dis.wf", ".")
-            #try:
+            # cp(f"../{input_wf}.wf", ".")
+            # mv(f"../{input_wf}_dis.wf", ".")
+            # try:
             #    mv(f"../{input_wf}_nrg.amo", ".")
-            #except FileNotFoundError:
+            # except FileNotFoundError:
             #    pass
             ##
-            #csf_coefficients, csfs, CI_coefficients, wfpretext = (
+            # csf_coefficients, csfs, CI_coefficients, wfpretext = (
             #    self.sCI.read_AMOLQC_csfs(f"{input_wf}.wf", self.N)
-            #)
-            #csf_coefficients_dis, csfs_dis, CI_coefficients_dis, _ = (
+            # )
+            # csf_coefficients_dis, csfs_dis, CI_coefficients_dis, _ = (
             #    self.sCI.read_AMOLQC_csfs(f"{input_wf}_dis.wf", self.N)
-            #)
+            # )
 
             ## add current csfs with already sorted, discarded csfs
-            #csf_coefficients += csf_coefficients_dis
-            #csfs += csfs_dis
-            #CI_coefficients += CI_coefficients_dis
+            # csf_coefficients += csf_coefficients_dis
+            # csfs += csfs_dis
+            # CI_coefficients += CI_coefficients_dis
 
-            #self.sCI.write_AMOLQC(
+            # self.sCI.write_AMOLQC(
             #    csf_coefficients[:max_csfs],
             #    csfs[: max_csfs],
             #    CI_coefficients[: max_csfs],
             #    pretext=wfpretext,
             #    file_name=f"{self.wavefunction_name}.wf",
-            #)
-            #self.sCI.write_AMOLQC(
+            # )
+            # self.sCI.write_AMOLQC(
             #    csf_coefficients[max_csfs :],
             #    csfs[max_csfs :],
             #    CI_coefficients[max_csfs :],
             #    file_name=f"{self.wavefunction_name}_dis.wf",
-            #)
+            # )
 
             ## optimize wavefunction
-            #cp(f"../{final_ami}.ami", ".")
+            # cp(f"../{final_ami}.ami", ".")
             ## submit job
-            #self.print_job_file(
+            # self.print_job_file(
             #    self.partition,
             #    dir_name,
             #    self.n_tasks,
             #    final_ami,
-            #)
-            #run("sbatch amolqc_job")
+            # )
+            # run("sbatch amolqc_job")
             ## check if job done
-            #job_done = False
-            #while not job_done:
+            # job_done = False
+            # while not job_done:
             #    job_done = self.check_job_done(final_ami)
             #    if not job_done:
             #        if self.verbose:
@@ -612,14 +615,19 @@ blockwise opimization is finished."
                 # parse energy contributions
                 _, energies_optimized = self.parse_csf_energies(
                     f"{energy_ami}.amo",
-                    len(csfs[: max_csfs])-1,
+                    len(csfs[:max_csfs]) - 1,
                     sort_by_idx=True,
                     verbose=True,
                 )
 
             # read in new optimized wavefunction
-            csf_coefficients_optimized, csfs_optimized, CI_coefficients_optimized, wfpretext = (
-                self.sCI.read_AMOLQC_csfs(f"{optimized_wavefunction}.wf", self.N)
+            (
+                csf_coefficients_optimized,
+                csfs_optimized,
+                CI_coefficients_optimized,
+                wfpretext,
+            ) = self.sCI.read_AMOLQC_csfs(
+                f"{optimized_wavefunction}.wf", self.N
             )
 
             # select by criterion
@@ -633,7 +641,9 @@ blockwise opimization is finished."
                 energies_optimized.insert(0, np.ceil(max(energies_optimized)))
                 ref_list_optimized = energies_optimized
                 absol = False
-                mask = [False] + [True for _ in range(len(ref_list_optimized) - 1)]
+                mask = [False] + [
+                    True for _ in range(len(ref_list_optimized) - 1)
+                ]
             elif criterion == "ci_coefficient":
                 ref_list_optimized = CI_coefficients_optimized
                 mask = [True for _ in range(len(ref_list_optimized))]
@@ -817,7 +827,7 @@ blockwise opimization is finished."
                     self.threshold,
                     self.max_csfs,
                     threshold_type=self.threshold_type,
-                    verbose=self.verbose
+                    verbose=self.verbose,
                 )
                 mv(
                     f"{last_wavefunction}_out.wf",
@@ -916,6 +926,10 @@ blockwise opimization is finished."
         )
         if self.threshold_type == "sum_up":
             n_blocks = max_blocks
+        flex = True
+        if flex:
+            n_blocks = max_blocks
+
         # n_blocks = math.ceil(174 / (self.blocksize - self.n_min))
         # blockwise iteration
         last_block = self.do_block_iteration(
@@ -946,4 +960,4 @@ blockwise opimization is finished."
             self.excitations,
         )
         # final block
-        #self.do_final_block("final", f"{last_it}", final_ami)
+        # self.do_final_block("final", f"{last_it}", final_ami)

@@ -258,6 +258,17 @@ def main():
                 side=-1,
                 absol=True,
             )
+        elif criterion == "by_excitation":
+            ref_determinant = sCI.build_energy_lowest_detetminant(N)
+            # sort by CI coefficient
+            print("Sort wave function by level of excitation.")
+            csf_coefficients, csfs, CI_coefficients = sCI.sort_order_of_csfs(
+                csf_coefficients,
+                csfs,
+                CI_coefficients,
+                "by_excitation",
+                ref_determinant,
+            )
 
         if wftype == "csf" and not csf_coefficients:
             n_dets = len(csfs[:split_at])
@@ -273,6 +284,43 @@ def main():
                 f"number of csfs generated from {n_dets} determinants is \
 {len(csfs)}."
             )
+        print("Write wave function.")
+        sCI.write_AMOLQC(
+            csf_coefficients[:split_at],
+            csfs[:split_at],
+            CI_coefficients[:split_at],
+            pretext=wfpretext,
+            file_name=f"{wavefunction_name}_out.wf",
+            wftype=wftype,
+        )
+
+    elif data["WavefunctionOptions"]["wavefunctionOperation"] == "sort":
+        # read wf and cut by split_at
+        csf_coefficients, csfs, CI_coefficients, wfpretext = (
+            sCI.read_AMOLQC_csfs(f"{wavefunction_name}.wf", N)
+        )
+
+        if criterion == "ci_coefficient":
+            # sort by CI coefficient
+            print("Sort wave function by absolute CI coefficient.")
+            csf_coefficients, csfs, CI_coefficients = sCI.sort_lists_by_list(
+                [csf_coefficients, csfs, CI_coefficients],
+                CI_coefficients,
+                side=-1,
+                absol=True,
+            )
+        elif criterion == "by_excitation":
+            ref_determinant = sCI.build_energy_lowest_detetminant(N)
+            # sort by CI coefficient
+            print("Sort wave function by level of excitation.")
+            csf_coefficients, csfs, CI_coefficients = sCI.sort_order_of_csfs(
+                csf_coefficients,
+                csfs,
+                CI_coefficients,
+                "by_excitation",
+                ref_determinant,
+            )
+
         print("Write wave function.")
         sCI.write_AMOLQC(
             csf_coefficients[:split_at],
